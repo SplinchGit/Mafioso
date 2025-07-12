@@ -1,0 +1,70 @@
+{
+  "name": "mafioso-backend",
+  "version": "1.0.0",
+  "description": "Backend functions for Mafioso - Mafia/Gangster Browser Game",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "deploy": "sam deploy --guided",
+    "deploy:dev": "sam deploy --config-env dev",
+    "deploy:staging": "sam deploy --config-env staging",
+    "deploy:prod": "sam deploy --config-env prod",
+    "local": "sam local start-api",
+    "package": "sam package --s3-bucket mafioso-deployment-artifacts",
+    "validate": "sam validate"
+  },
+  "keywords": [
+    "mafia",
+    "game",
+    "world-id",
+    "serverless",
+    "aws",
+    "lambda",
+    "dynamodb"
+  ],
+  "author": "Mafioso Team",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/lib-dynamodb": "^3.450.0",
+    "@aws-sdk/client-s3": "^3.450.0",
+    "@aws-sdk/client-sns": "^3.450.0",
+    "@aws-sdk/client-sqs": "^3.450.0",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "uuid": "^9.0.1",
+    "date-fns": "^2.30.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/aws-lambda": "^8.10.126",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/bcryptjs": "^2.4.5",
+    "@types/uuid": "^9.0.7",
+    "@types/jest": "^29.5.6",
+    "@typescript-eslint/eslint-plugin": "^6.9.0",
+    "@typescript-eslint/parser": "^6.9.0",
+    "eslint": "^8.52.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.0",
+    "aws-sdk-mock": "^5.8.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/mafioso-backend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/mafioso-backend/issues"
+  },
+  "homepage": "https://github.com/your-org/mafioso-backend#readme"
+}

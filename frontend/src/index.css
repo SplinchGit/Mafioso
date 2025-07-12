@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: 'Georgia', serif;
+    line-height: 1.5;
+    font-weight: 400;
+    color-scheme: dark;
+    color: rgba(255, 255, 255, 0.87);
+    background-color: #0f172a;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: Georgia, serif;
+    color: #ff6b6b;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  }
+}
+
+@layer components {
+  .btn-mafia {
+    @apply bg-mafia-red hover:bg-mafia-crimson text-white font-bold py-2 px-4 rounded-lg transition-all duration-300 shadow-lg border border-mafia-red hover:border-mafia-crimson;
+  }
+
+  .btn-secondary {
+    @apply bg-mafia-gray-700 hover:bg-mafia-gray-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-300 border border-mafia-gray-600;
+  }
+
+  .card-mafia {
+    @apply bg-mafia-gray-800 border border-mafia-gray-700 rounded-lg p-6 shadow-2xl backdrop-blur-sm;
+  }
+
+  .text-money {
+    @apply text-money font-mono font-bold;
+  }
+
+  .text-blood {
+    @apply text-blood font-semibold;
+  }
+}
