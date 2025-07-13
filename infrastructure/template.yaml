@@ -54,7 +54,7 @@ Resources:
   VerifyWorldIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: verifyWorldId.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -79,7 +79,7 @@ Resources:
   VerifyMiniKitFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: verifyMiniKit.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -104,7 +104,7 @@ Resources:
   NonceFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: nonce.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -127,7 +127,7 @@ Resources:
   WalletLoginFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: walletLogin.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -152,7 +152,7 @@ Resources:
   CreateAccountFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: createAccount.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -175,7 +175,7 @@ Resources:
   CheckUsernameFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: checkUsername.handler
       Policies:
         - DynamoDBCrudPolicy:
@@ -198,7 +198,7 @@ Resources:
   ValidateTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/functions/auth/
+      CodeUri: ../backend/dist/backend/functions/auth/
       Handler: validateToken.handler
       Policies:
         - DynamoDBCrudPolicy:
