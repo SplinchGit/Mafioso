@@ -1,5 +1,5 @@
 import { useGameStore } from '../store/gameStore';
-import { CITIES, RANKS, CARS } from '../../../shared/constants';
+import { CITIES, RANKS, CARS } from '../../../shared/constants.ts';
 
 const Dashboard = () => {
   const { player } = useGameStore();

@@ -13,7 +13,14 @@
       "Bash(ls:*)",
       "Bash(npm config:*)",
       "Bash(sam local start-api:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(Remove-Item shared/*.js -Force)",
+      "Bash(Remove-Item shared/*.js.map -Force)",
+      "Bash(Remove-Item shared/*.d.ts -Force)",
+      "Bash(Remove-Item shared/*.d.ts.map -Force)",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
