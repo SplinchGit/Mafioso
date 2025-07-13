@@ -26,32 +26,81 @@ const Login = () => {
     setAuthError(null);
 
     try {
-      // Get nonce
+      // Debug: Log environment
+      console.log('[AUTH] Starting wallet auth flow');
+      console.log('[AUTH] Environment:', import.meta.env.MODE);
+      console.log('[AUTH] API Endpoint:', import.meta.env.VITE_API_ENDPOINT);
+      
+      // Get nonce with detailed error handling
       const apiUrl = import.meta.env.PROD 
         ? `${import.meta.env.VITE_API_ENDPOINT}/auth/nonce`
         : '/api/auth/nonce';
       
-      const nonceResponse = await fetch(apiUrl);
-      if (!nonceResponse.ok) throw new Error('Failed to get nonce');
-      const { nonce } = await nonceResponse.json();
+      console.log('[AUTH] Fetching nonce from:', apiUrl);
+      
+      let nonceResponse;
+      try {
+        nonceResponse = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          mode: 'cors'
+        });
+        
+        console.log('[AUTH] Nonce response status:', nonceResponse.status);
+        console.log('[AUTH] Nonce response headers:', Object.fromEntries(nonceResponse.headers.entries()));
+        
+        if (!nonceResponse.ok) {
+          const errorText = await nonceResponse.text();
+          console.error('[AUTH] Nonce request failed:', errorText);
+          throw new Error(`Failed to get nonce: ${nonceResponse.status} ${errorText}`);
+        }
+      } catch (fetchError) {
+        console.error('[AUTH] Fetch error details:', {
+          message: fetchError instanceof Error ? fetchError.message : String(fetchError),
+          stack: fetchError instanceof Error ? fetchError.stack : undefined,
+          type: fetchError instanceof Error ? fetchError.name : typeof fetchError
+        });
+        throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+      }
+      
+      const nonceData = await nonceResponse.json();
+      console.log('[AUTH] Nonce received:', nonceData);
+      
+      if (!nonceData.success || !nonceData.nonce) {
+        throw new Error('Invalid nonce response');
+      }
 
       // Trigger wallet auth
-      const payload = await triggerWalletAuth(nonce);
+      console.log('[AUTH] Triggering MiniKit wallet auth');
+      const payload = await triggerWalletAuth(nonceData.nonce);
+      console.log('[AUTH] Wallet auth successful:', payload);
       
       // Send to backend
       const loginUrl = import.meta.env.PROD
         ? `${import.meta.env.VITE_API_ENDPOINT}/auth/wallet-login`
         : '/api/auth/wallet-login';
-
+      
+      console.log('[AUTH] Sending login request to:', loginUrl);
+      
       const response = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload, nonce })
+        body: JSON.stringify({ payload, nonce: nonceData.nonce }),
+        mode: 'cors'
       });
 
+      console.log('[AUTH] Login response:', response.status);
+      
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      if (!response.ok) {
+        console.error('[AUTH] Login failed:', data);
+        throw new Error(data.error);
+      }
 
+      console.log('[AUTH] Login successful:', data);
+      
       if (data.hasAccount) {
         localStorage.setItem('auth_token', data.token);
         setPlayer(data.player);
@@ -60,6 +109,7 @@ const Login = () => {
         setShowUsernameSelection(true);
       }
     } catch (error) {
+      console.error('[AUTH] Complete error:', error);
       const msg = error instanceof Error ? error.message : 'Authentication failed';
       setAuthError(msg);
       setError(msg);
