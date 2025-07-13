@@ -4,6 +4,12 @@ import './index.css'
 import App from './App.tsx'
 import MiniKitProvider from './providers/MiniKitProvider.tsx'
 
+// Always show Eruda for debugging
+import('eruda').then(({ default: eruda }) => {
+  eruda.init();
+  eruda.show();
+});
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MiniKitProvider>

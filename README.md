@@ -1,4 +1,4 @@
-# 🎭 Mafioso - Mafia/Gangster Browser Game
+# 🎭 Mafioso - Mafia/Gangster Browser Game.
 
 A World Mini App built with React TypeScript and AWS Serverless architecture. Build your criminal empire from the streets to the penthouse!
 

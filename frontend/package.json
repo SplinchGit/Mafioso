@@ -15,6 +15,7 @@
     "aws-amplify": "^6.15.3",
     "axios": "^1.10.0",
     "date-fns": "^3.6.0",
+    "eruda": "^3.4.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.30.1",

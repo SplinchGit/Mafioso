@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Amplify } from 'aws-amplify';
 import { useGameStore } from './store/gameStore';
 import { useInactivityLogout } from './hooks';
+import { shouldBlockBrowser } from './utils/deviceDetection';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Crimes from './pages/Crimes';
@@ -11,6 +12,7 @@ import Garage from './pages/Garage';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
+import BrowserBlock from './components/BrowserBlock';
 
 // Configure Amplify (you'll need to add your actual config)
 const amplifyConfig = {
@@ -28,6 +30,11 @@ Amplify.configure(amplifyConfig);
 
 function App() {
   const { player, isLoading, error, setLoading } = useGameStore();
+  
+  // Check if browser should be blocked
+  if (shouldBlockBrowser()) {
+    return <BrowserBlock />;
+  }
   
   // Set up inactivity logout
   useInactivityLogout();
