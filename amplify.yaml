@@ -7,6 +7,9 @@ frontend:
     build:
       commands:
         - npm run build
+        - mkdir -p dist
+        - cp -r frontend/dist/* dist/
+        - cp -r backend/dist dist/backend
   artifacts:
     baseDirectory: dist
     files:
@@ -14,3 +17,5 @@ frontend:
   cache:
     paths:
       - node_modules/**/*
+      - frontend/node_modules/**/*
+      - backend/node_modules/**/*
