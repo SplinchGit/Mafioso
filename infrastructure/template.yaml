@@ -61,6 +61,7 @@ Resources:
             TableName: !Ref PlayersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WorldIdTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -68,6 +69,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         VerifyWorldId:
           Type: Api
@@ -86,6 +96,7 @@ Resources:
             TableName: !Ref PlayersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WorldIdTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -93,6 +104,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         VerifyMiniKit:
           Type: Api
@@ -109,6 +129,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref NoncesTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -116,6 +137,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         GetNonce:
           Type: Api
@@ -134,6 +164,7 @@ Resources:
             TableName: !Ref PlayersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref NoncesTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -141,6 +172,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         WalletLogin:
           Type: Api
@@ -157,6 +197,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -164,6 +205,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         CreateAccount:
           Type: Api
@@ -180,6 +230,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -187,6 +238,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         CheckUsername:
           Type: Api
@@ -203,6 +263,7 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
         - Statement:
             - Effect: Allow
               Action:
@@ -210,6 +271,15 @@ Resources:
               Resource:
                 - !Ref JWTSecretArn
                 - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         ValidateToken:
           Type: Api
@@ -217,6 +287,43 @@ Resources:
             RestApiId: !Ref MafiosoApi
             Path: /auth/validate
             Method: get
+
+  CommitCrimeFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/crimes/
+      Handler: commitCrime.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CooldownsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CrimeHistoryTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        CommitCrime:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /crimes/commit
+            Method: post
 
   # DynamoDB Tables
   PlayersTable:
