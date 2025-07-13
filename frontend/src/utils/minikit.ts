@@ -1,4 +1,4 @@
-import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
+import { MiniKit, type MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 
 export async function triggerWalletAuth(nonce: string): Promise<MiniAppWalletAuthSuccessPayload> {
   if (!MiniKit.isInstalled()) {
