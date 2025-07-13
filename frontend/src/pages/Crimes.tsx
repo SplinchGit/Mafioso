@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CRIMES, RANKS } from '../../../shared/constants';
+import type { CrimeType } from '../types';
 
 const Crimes = () => {
   const { player, commitCrime, isLoading } = useGameStore();
@@ -22,7 +23,7 @@ const Crimes = () => {
     }
   };
 
-  const getCrimeSuccessChance = (crime: typeof CRIMES[0]) => {
+  const getCrimeSuccessChance = (crime: CrimeType) => {
     // Basic calculation - would be more complex in real implementation
     const baseSuccess = crime.baseSuccess;
     const rankBonus = player.rank * 2;
@@ -30,7 +31,7 @@ const Crimes = () => {
     return Math.min(95, baseSuccess + rankBonus + nerveBonus);
   };
 
-  const canCommitCrime = (crime: typeof CRIMES[0]) => {
+  const canCommitCrime = (crime: CrimeType) => {
     if (player.nerve < crime.nerve) return false;
     if (useGameStore.getState().isInJail() || useGameStore.getState().isInHospital()) return false;
     return true;

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Player } from '../types';
+import type { Player } from '../types';
 
 export const usePlayer = () => {
   const { 

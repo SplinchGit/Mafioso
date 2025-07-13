@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { WorldIdSuccessResponse } from '../types';
+import type { WorldIdSuccessResponse } from '../types';
 
 export const useAuth = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);

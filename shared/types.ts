@@ -1,4 +1,4 @@
-import { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
+import type { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
 
 export interface Player {
   worldId: string;
