@@ -11,7 +11,8 @@
     "install": "npm run install:frontend && npm run install:backend",
     "install:frontend": "cd frontend && npm install",
     "install:backend": "cd backend && npm install",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "npm run build:frontend && npm run build:backend && npm run build:copy",
+    "build:copy": "mkdir -p dist && cp -r frontend/dist/* dist/",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd backend && npm run build",
     "info": "echo 'Frontend runs on http://localhost:5173' && echo 'Backend API runs on http://localhost:3000' && echo 'Make sure AWS SAM CLI is installed: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html'"

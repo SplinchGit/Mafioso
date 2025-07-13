@@ -7,9 +7,6 @@ frontend:
     build:
       commands:
         - npm run build
-        - mkdir -p dist
-        - cp -r frontend/dist/* dist/
-        - cp -r backend/dist dist/backend
   artifacts:
     baseDirectory: dist
     files:
