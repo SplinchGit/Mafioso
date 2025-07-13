@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { IDKitWidget, VerificationLevel, ISuccessResult } from '@worldcoin/idkit';
+import { IDKitWidget, VerificationLevel, type ISuccessResult, type IErrorState } from '@worldcoin/idkit';
 import { useGameStore } from '../store/gameStore';
 
 const Login = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState<string | null>(null);
-  const { setPlayer, setLoading, setError } = useGameStore();
+  const { setPlayer, setError } = useGameStore();
 
   const handleWorldIdSuccess = async (result: ISuccessResult) => {
     setIsVerifying(true);
@@ -47,9 +47,11 @@ const Login = () => {
     }
   };
 
-  const handleWorldIdError = (error: Error) => {
+  const handleWorldIdError = (error: IErrorState) => {
     console.error('World ID verification error:', error);
-    setVerificationError('World ID verification failed. Please try again.');
+    const errorMessage = error.message || 'World ID verification failed. Please try again.';
+    setVerificationError(errorMessage);
+    setError(errorMessage);
   };
 
   return (

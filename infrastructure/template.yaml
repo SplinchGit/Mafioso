@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Mafioso - Mafia/Gangster Browser Game Infrastructure
+Description: Mafioso - Backend API and Database Infrastructure
 
 Globals:
   Function:
@@ -42,26 +42,11 @@ Resources:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
-      Auth:
-        DefaultAuthorizer: AWS_IAM
-        InvokeRole: NONE
-      GatewayResponses:
-        DEFAULT_4XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
-        DEFAULT_5XX:
-          ResponseParameters:
-            Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
 
   # Lambda Functions
   VerifyWorldIdFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub 'mafioso-${Stage}-verify-worldid'
       CodeUri: ../backend/functions/auth/
       Handler: verifyWorldId.handler
       Environment:
@@ -80,86 +65,6 @@ Resources:
             Path: /auth/verify-worldid
             Method: post
 
-  CommitCrimeFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'mafioso-${Stage}-commit-crime'
-      CodeUri: ../backend/functions/crimes/
-      Handler: commitCrime.handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PlayersTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CooldownsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref CrimeHistoryTable
-      Events:
-        CommitCrime:
-          Type: Api
-          Properties:
-            RestApiId: !Ref MafiosoApi
-            Path: /crimes/commit
-            Method: post
-            Auth:
-              Authorizer: NONE
-
-  GetPlayerFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'mafioso-${Stage}-get-player'
-      CodeUri: ../backend/functions/player/
-      Handler: getPlayer.handler
-      Policies:
-        - DynamoDBReadPolicy:
-            TableName: !Ref PlayersTable
-      Events:
-        GetPlayer:
-          Type: Api
-          Properties:
-            RestApiId: !Ref MafiosoApi
-            Path: /player/profile
-            Method: get
-            Auth:
-              Authorizer: NONE
-
-  TravelFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'mafioso-${Stage}-travel'
-      CodeUri: ../backend/functions/player/
-      Handler: travel.handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PlayersTable
-      Events:
-        Travel:
-          Type: Api
-          Properties:
-            RestApiId: !Ref MafiosoApi
-            Path: /player/travel
-            Method: post
-            Auth:
-              Authorizer: NONE
-
-  BuyCarFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub 'mafioso-${Stage}-buy-car'
-      CodeUri: ../backend/functions/player/
-      Handler: buyCar.handler
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref PlayersTable
-      Events:
-        BuyCar:
-          Type: Api
-          Properties:
-            RestApiId: !Ref MafiosoApi
-            Path: /player/buy-car
-            Method: post
-            Auth:
-              Authorizer: NONE
-
   # DynamoDB Tables
   PlayersTable:
     Type: AWS::DynamoDB::Table
@@ -169,29 +74,9 @@ Resources:
       AttributeDefinitions:
         - AttributeName: worldId
           AttributeType: S
-        - AttributeName: rank
-          AttributeType: N
-        - AttributeName: respect
-          AttributeType: N
       KeySchema:
         - AttributeName: worldId
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: RankIndex
-          KeySchema:
-            - AttributeName: rank
-              KeyType: HASH
-            - AttributeName: respect
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-      StreamSpecification:
-        StreamViewType: NEW_AND_OLD_IMAGES
-      Tags:
-        - Key: Project
-          Value: Mafioso
-        - Key: Stage
-          Value: !Ref Stage
 
   WorldIdTable:
     Type: AWS::DynamoDB::Table
@@ -204,11 +89,6 @@ Resources:
       KeySchema:
         - AttributeName: nullifierHash
           KeyType: HASH
-      Tags:
-        - Key: Project
-          Value: Mafioso
-        - Key: Stage
-          Value: !Ref Stage
 
   CooldownsTable:
     Type: AWS::DynamoDB::Table
@@ -219,20 +99,15 @@ Resources:
         - AttributeName: playerId
           AttributeType: S
         - AttributeName: crimeId
-          AttributeType: S
+          AttributeType: N
       KeySchema:
         - AttributeName: playerId
           KeyType: HASH
         - AttributeName: crimeId
           KeyType: RANGE
       TimeToLiveSpecification:
-        AttributeName: ttl
+        AttributeName: expiresAt
         Enabled: true
-      Tags:
-        - Key: Project
-          Value: Mafioso
-        - Key: Stage
-          Value: !Ref Stage
 
   CrimeHistoryTable:
     Type: AWS::DynamoDB::Table
@@ -242,137 +117,11 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
-        - AttributeName: playerId
-          AttributeType: S
-        - AttributeName: timestamp
-          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: PlayerHistoryIndex
-          KeySchema:
-            - AttributeName: playerId
-              KeyType: HASH
-            - AttributeName: timestamp
-              KeyType: RANGE
-          Projection:
-            ProjectionType: ALL
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
-      Tags:
-        - Key: Project
-          Value: Mafioso
-        - Key: Stage
-          Value: !Ref Stage
-
-  # CloudFront Distribution for Frontend
-  CloudFrontDistribution:
-    Type: AWS::CloudFront::Distribution
-    Properties:
-      DistributionConfig:
-        Enabled: true
-        DefaultRootObject: index.html
-        Comment: !Sub 'Mafioso ${Stage} Frontend Distribution'
-        Origins:
-          - Id: S3Origin
-            DomainName: !GetAtt FrontendBucket.DomainName
-            S3OriginConfig:
-              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${OriginAccessIdentity}'
-        DefaultCacheBehavior:
-          TargetOriginId: S3Origin
-          ViewerProtocolPolicy: redirect-to-https
-          Compress: true
-          ForwardedValues:
-            QueryString: false
-            Cookies:
-              Forward: none
-          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # CachingDisabled
-        CustomErrorResponses:
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-        PriceClass: PriceClass_100
-
-  # S3 Bucket for Frontend
-  FrontendBucket:
-    Type: AWS::S3::Bucket
-    Properties:
-      BucketName: !Sub 'mafioso-${Stage}-frontend-${AWS::AccountId}'
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      Tags:
-        - Key: Project
-          Value: Mafioso
-        - Key: Stage
-          Value: !Ref Stage
-
-  # CloudFront Origin Access Identity
-  OriginAccessIdentity:
-    Type: AWS::CloudFront::OriginAccessIdentity
-    Properties:
-      OriginAccessIdentityConfig:
-        Comment: !Sub 'OAI for Mafioso ${Stage}'
-
-  # S3 Bucket Policy
-  FrontendBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref FrontendBucket
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: !Sub 'arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${OriginAccessIdentity}'
-            Action: 's3:GetObject'
-            Resource: !Sub '${FrontendBucket}/*'
-
-  # Custom Domain (Optional)
-  # Certificate:
-  #   Type: AWS::CertificateManager::Certificate
-  #   Properties:
-  #     DomainName: !Sub '${Stage}.mafioso.game'
-  #     ValidationMethod: DNS
-  #     Tags:
-  #       - Key: Project
-  #         Value: Mafioso
-  #       - Key: Stage
-  #         Value: !Ref Stage
 
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint URL
     Value: !Sub 'https://${MafiosoApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}'
-    Export:
-      Name: !Sub '${AWS::StackName}-ApiUrl'
-
-  CloudFrontUrl:
-    Description: CloudFront distribution URL
-    Value: !GetAtt CloudFrontDistribution.DomainName
-    Export:
-      Name: !Sub '${AWS::StackName}-CloudFrontUrl'
-
-  FrontendBucket:
-    Description: S3 bucket for frontend assets
-    Value: !Ref FrontendBucket
-    Export:
-      Name: !Sub '${AWS::StackName}-FrontendBucket'
-
-  PlayersTableName:
-    Description: DynamoDB Players table name
-    Value: !Ref PlayersTable
-    Export:
-      Name: !Sub '${AWS::StackName}-PlayersTable'
-
-  WorldIdTableName:
-    Description: DynamoDB World ID table name
-    Value: !Ref WorldIdTable
-    Export:
-      Name: !Sub '${AWS::StackName}-WorldIdTable'

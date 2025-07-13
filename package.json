@@ -1,0 +1,22 @@
+{
+  "name": "mafioso",
+  "version": "1.0.0",
+  "description": "Mafioso - Mafia/Gangster Browser Game",
+  "private": true,
+  "scripts": {
+    "dev": "echo 'Starting Mafioso development servers...' && concurrently -n \"backend,frontend\" -c \"yellow,cyan\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && sam local start-api --port 3000",
+    "dev:frontend-only": "cd frontend && npm run dev",
+    "install": "npm run install:frontend && npm run install:backend",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && npm install",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "info": "echo 'Frontend runs on http://localhost:5173' && echo 'Backend API runs on http://localhost:3000' && echo 'Make sure AWS SAM CLI is installed: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html'"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

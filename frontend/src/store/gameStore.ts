@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { Player, GameState, CrimeResult } from '../../../shared/types';
-import { GAME_CONFIG } from '../../../shared/constants';
+import type { Player, GameState, CrimeResult } from '../../../shared/types';
 
 interface GameStore extends GameState {
   // Actions

@@ -1,0 +1,11 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "mafioso-backend"
+resolve_s3 = true
+s3_prefix = "mafioso-backend"
+region = "eu-west-2"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Stage=\"prod\" WorldIdAppId=\"app_bc75ea0f4623eb64e1814126df474de3\""
+image_repositories = []
