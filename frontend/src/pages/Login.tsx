@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
+import { MiniKit, type MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 import ChooseUsername from '../components/ChooseUsername';
 

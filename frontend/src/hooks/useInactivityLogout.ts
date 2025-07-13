@@ -7,7 +7,7 @@ const CHECK_INTERVAL = 60 * 1000; // Check every minute
 export const useInactivityLogout = () => {
   const { player, setPlayer, setError } = useGameStore();
   const lastActivityRef = useRef<number>(Date.now());
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
 
   const updateActivity = () => {
     lastActivityRef.current = Date.now();
@@ -57,7 +57,7 @@ export const useInactivityLogout = () => {
     setPlayer(null);
     setError(message);
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      window.clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
   };
@@ -72,7 +72,7 @@ export const useInactivityLogout = () => {
       });
 
       // Set up periodic inactivity check
-      intervalRef.current = setInterval(checkInactivity, CHECK_INTERVAL);
+      intervalRef.current = window.setInterval(checkInactivity, CHECK_INTERVAL);
 
       return () => {
         // Cleanup
@@ -81,13 +81,13 @@ export const useInactivityLogout = () => {
         });
         
         if (intervalRef.current) {
-          clearInterval(intervalRef.current);
+          window.clearInterval(intervalRef.current);
         }
       };
     } else {
       // Clear interval if no player
       if (intervalRef.current) {
-        clearInterval(intervalRef.current);
+        window.clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
     }
