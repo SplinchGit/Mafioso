@@ -27,7 +27,8 @@
       "Bash(npm update:*)",
       "Bash(ncu:*)",
       "Bash(git reset:*)",
-      "Bash(sam deploy:*)"
+      "Bash(sam deploy:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
