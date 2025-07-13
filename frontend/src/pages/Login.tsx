@@ -27,7 +27,11 @@ const Login = () => {
 
     try {
       // Get nonce
-      const nonceResponse = await fetch('/api/auth/nonce');
+      const apiUrl = import.meta.env.PROD 
+        ? `${import.meta.env.VITE_API_ENDPOINT}/auth/nonce`
+        : '/api/auth/nonce';
+      
+      const nonceResponse = await fetch(apiUrl);
       if (!nonceResponse.ok) throw new Error('Failed to get nonce');
       const { nonce } = await nonceResponse.json();
 
@@ -35,7 +39,11 @@ const Login = () => {
       const payload = await triggerWalletAuth(nonce);
       
       // Send to backend
-      const response = await fetch('/api/auth/wallet-login', {
+      const loginUrl = import.meta.env.PROD
+        ? `${import.meta.env.VITE_API_ENDPOINT}/auth/wallet-login`
+        : '/api/auth/wallet-login';
+
+      const response = await fetch(loginUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payload, nonce })
