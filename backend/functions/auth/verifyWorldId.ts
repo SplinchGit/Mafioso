@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
-import { GAME_CONFIG, RANKS } from '../../../shared/constants';
+import { GAME_CONFIG } from '../../../shared/constants';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -164,7 +164,7 @@ export const handler = async (
   }
 };
 
-async function verifyWorldIdProof(data: WorldIdVerifyRequest): Promise<boolean> {
+async function verifyWorldIdProof(_data: WorldIdVerifyRequest): Promise<boolean> {
   // In production, this would call the World ID API to verify the proof
   // For development, we'll return true
   
@@ -269,7 +269,7 @@ async function storeWorldIdVerification(verification: {
   }));
 }
 
-async function updatePlayerLastActive(worldId: string): Promise<void> {
+async function updatePlayerLastActive(_worldId: string): Promise<void> {
   // This would use UpdateCommand to update lastActive timestamp
   // Simplified for this example
 }

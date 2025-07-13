@@ -219,7 +219,7 @@ async function getPlayer(worldId: string): Promise<Player | null> {
   }
 }
 
-function validateCrimeAttempt(player: Player, crime: typeof CRIMES[0]): { canCommit: boolean; reason?: string } {
+function validateCrimeAttempt(player: Player, crime: typeof CRIMES[number]): { canCommit: boolean; reason?: string } {
   // Check if player is in jail or hospital
   if (player.jailUntil && new Date(player.jailUntil) > new Date()) {
     return { canCommit: false, reason: 'You are currently in jail' };
@@ -275,7 +275,7 @@ async function checkCrimeCooldown(playerId: string, crimeId: number): Promise<{ 
   }
 }
 
-function calculateCrimeResult(player: Player, crime: typeof CRIMES[0]): CrimeResult {
+function calculateCrimeResult(player: Player, crime: typeof CRIMES[number]): CrimeResult {
   // Calculate success chance
   const baseSuccess = crime.baseSuccess;
   const rankBonus = Math.min(player.rank * 2, 20); // Max 20% bonus from rank
@@ -332,7 +332,7 @@ function calculateCrimeResult(player: Player, crime: typeof CRIMES[0]): CrimeRes
   }
 }
 
-async function processCrimeResult(player: Player, crime: typeof CRIMES[0], result: CrimeResult): Promise<Player> {
+async function processCrimeResult(player: Player, crime: typeof CRIMES[number], result: CrimeResult): Promise<Player> {
   const now = new Date().toISOString();
   
   const updates: Partial<Player> = {

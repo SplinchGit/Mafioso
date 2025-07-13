@@ -20,7 +20,12 @@
       "Bash(Remove-Item shared/*.js.map -Force)",
       "Bash(Remove-Item shared/*.d.ts -Force)",
       "Bash(Remove-Item shared/*.d.ts.map -Force)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(git push:*)",
+      "Bash(npm ls:*)",
+      "Bash(ncu)",
+      "Bash(npm update:*)",
+      "Bash(ncu:*)"
     ],
     "deny": []
   }
