@@ -64,6 +64,43 @@ export interface WorldIdModalProps {
   onClose: () => void;
 }
 
+export interface GameCrime {
+  id: number;
+  name: string;
+  description: string;
+  baseSuccess: number;
+  basePayout: {
+    min: number;
+    max: number;
+  };
+  baseRespect: number;
+  requiredRank: number;
+  cooldown: number;
+  nerve: number;
+}
+
+// If Player type is missing, add:
+export interface Player {
+  worldId: string;
+  username: string;
+  money: number;
+  respect: number;
+  nerve: number;
+  maxNerve: number;
+  rank: number;
+  city: string;
+  carId: string | null;
+  stats: {
+    crimesCommitted: number;
+    crimesSuccessful: number;
+    crimesFailed: number;
+    totalMoneyEarned: number;
+    totalRespectEarned: number;
+  };
+  createdAt: string;
+  lastActive: string;
+}
+
 // Game UI specific types
 export interface CrimeCardProps {
   crime: GameCrime;
