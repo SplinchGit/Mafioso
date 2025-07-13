@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { MiniKit, type MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
+import { MiniKit } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 import ChooseUsername from '../components/ChooseUsername';
+import { triggerWalletAuth } from '../utils/minikit';
 
 const Login = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -25,55 +26,35 @@ const Login = () => {
     setAuthError(null);
 
     try {
-      // Get nonce from backend
+      // Get nonce
       const nonceResponse = await fetch('/api/auth/nonce');
-      if (!nonceResponse.ok) {
-        throw new Error('Failed to get nonce');
-      }
+      if (!nonceResponse.ok) throw new Error('Failed to get nonce');
       const { nonce } = await nonceResponse.json();
 
-      // Use walletAuth instead of verify
-      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
-        nonce: nonce,
-        statement: 'Sign in to Mafioso',
-        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      // Trigger wallet auth
+      const payload = await triggerWalletAuth(nonce);
+      
+      // Send to backend
+      const response = await fetch('/api/auth/wallet-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload, nonce })
       });
 
-      if (finalPayload.status === 'success') {
-        const payload = finalPayload as MiniAppWalletAuthSuccessPayload;
-        
-        // Send wallet auth to backend
-        const response = await fetch('/api/auth/wallet-login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ payload, nonce })
-        });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
 
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Authentication failed');
-        }
-
-        if (data.hasAccount) {
-          // Existing account - auto login
-          localStorage.setItem('auth_token', data.token);
-          setPlayer(data.player);
-        } else {
-          // New account - show username selection
-          setWalletAddress(payload.address);
-          setShowUsernameSelection(true);
-        }
+      if (data.hasAccount) {
+        localStorage.setItem('auth_token', data.token);
+        setPlayer(data.player);
       } else {
-        throw new Error('Wallet authentication failed');
+        setWalletAddress(payload.address);
+        setShowUsernameSelection(true);
       }
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
-      setAuthError(errorMessage);
-      setError(errorMessage);
+      const msg = error instanceof Error ? error.message : 'Authentication failed';
+      setAuthError(msg);
+      setError(msg);
     } finally {
       setIsAuthenticating(false);
     }
