@@ -28,7 +28,10 @@
       "Bash(ncu:*)",
       "Bash(git reset:*)",
       "Bash(sam deploy:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(aws cloudformation describe-stacks:*)",
+      "Bash(aws cloudformation:*)",
+      "Bash(aws apigateway get-resources:*)"
     ],
     "deny": []
   }
