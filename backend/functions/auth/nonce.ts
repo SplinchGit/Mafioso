@@ -2,6 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as crypto from 'crypto';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -9,9 +10,13 @@ const docClient = DynamoDBDocumentClient.from(client);
 const NONCES_TABLE = process.env.NONCES_TABLE || 'mafioso-nonces';
 
 export const handler = async (
-  _event: APIGatewayProxyEvent
+  event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Nonce generation request');
+  const requestId = event.requestContext.requestId;
+  logger.infoSync('Nonce generation request', {
+    requestId,
+    operation: 'generate-nonce'
+  });
 
   try {
     // Generate a cryptographically secure nonce (min 8 alphanumeric chars)
@@ -44,7 +49,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('Nonce generation error:', error);
+    logger.errorSync('Nonce generation error', {
+      requestId,
+      operation: 'generate-nonce',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,

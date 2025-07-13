@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
 import { getJWTSecret } from '../../shared/utils';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -23,7 +24,12 @@ interface WorldIdVerifyRequest {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('World ID verification request:', event.body);
+  const requestId = event.requestContext.requestId;
+  await logger.info('World ID verification request initiated', {
+    requestId,
+    operation: 'verify-worldid',
+    hasBody: !!event.body
+  });
 
   try {
     if (!event.body) {
@@ -149,7 +155,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('World ID verification error:', error);
+    await logger.error('World ID verification failed', {
+      requestId: event.requestContext.requestId,
+      operation: 'verify-worldid',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -202,7 +213,11 @@ async function getWorldIdVerification(nullifierHash: string): Promise<WorldIdVer
     
     return result.Item as WorldIdVerification || null;
   } catch (error) {
-    console.error('Error getting World ID verification:', error);
+    logger.errorSync('Failed to get World ID verification from database', {
+      operation: 'getWorldIdVerification',
+      nullifierHash,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     return null;
   }
 }

@@ -7,6 +7,7 @@ import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
 import { getJWTSecret } from '../../shared/utils';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -17,7 +18,12 @@ const WORLD_ID_TABLE = process.env.WORLD_ID_TABLE || 'mafioso-worldid';
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('MiniKit verification request:', event.body);
+  const requestId = event.requestContext.requestId;
+  await logger.info('MiniKit verification request initiated', {
+    requestId,
+    operation: 'verify-minikit',
+    hasBody: !!event.body
+  });
 
   try {
     if (!event.body) {
@@ -119,7 +125,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('MiniKit verification error:', error);
+    await logger.error('MiniKit verification error', {
+      requestId,
+      operation: 'verify-minikit',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -146,7 +157,11 @@ async function getWorldIdVerification(nullifierHash: string): Promise<WorldIdVer
     
     return result.Item as WorldIdVerification || null;
   } catch (error) {
-    console.error('Error getting World ID verification:', error);
+    logger.errorSync('Error getting World ID verification', {
+      operation: 'get-worldid-verification',
+      nullifierHash,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return null;
   }
 }

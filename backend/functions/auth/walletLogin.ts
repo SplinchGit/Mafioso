@@ -5,6 +5,7 @@ import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-
 import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { getJWTSecret } from '../../shared/utils';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -28,7 +29,10 @@ async function verifySiweMessage(payload: MiniAppWalletAuthSuccessPayload, nonce
     // In production, you might want additional verification
     return true;
   } catch (error) {
-    console.error('SIWE verification error:', error);
+    logger.errorSync('SIWE verification failed', {
+      operation: 'verifySiweMessage',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     return false;
   }
 }
@@ -36,7 +40,12 @@ async function verifySiweMessage(payload: MiniAppWalletAuthSuccessPayload, nonce
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Wallet login request:', event.body);
+  const requestId = event.requestContext.requestId;
+  await logger.info('Wallet login request initiated', {
+    requestId,
+    operation: 'wallet-login',
+    hasBody: !!event.body
+  });
 
   try {
     if (!event.body) {

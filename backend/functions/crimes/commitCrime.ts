@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@
 import * as jwt from 'jsonwebtoken';
 import { Player, CrimeResult, CrimeAttempt, PlayerCooldown } from '../../../shared/types';
 import { CRIMES, RANKS, CRIME_OUTCOMES, GAME_CONFIG } from '../../../shared/constants';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -20,7 +21,12 @@ interface CommitCrimeRequest {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Commit crime request:', event.body);
+  const requestId = event.requestContext.requestId;
+  await logger.info('Commit crime request initiated', {
+    requestId,
+    operation: 'commit-crime',
+    hasBody: !!event.body
+  });
 
   try {
     // Verify authentication
@@ -187,7 +193,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('Commit crime error:', error);
+    await logger.error('Commit crime error', {
+      requestId,
+      operation: 'commit-crime',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -214,7 +225,11 @@ async function getPlayer(worldId: string): Promise<Player | null> {
     
     return result.Item as Player || null;
   } catch (error) {
-    console.error('Error getting player:', error);
+    logger.errorSync('Error getting player', {
+      operation: 'get-player',
+      worldId,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return null;
   }
 }
@@ -270,7 +285,12 @@ async function checkCrimeCooldown(playerId: string, crimeId: number): Promise<{ 
       timeRemaining: expiresAt.getTime() - now.getTime() 
     };
   } catch (error) {
-    console.error('Error checking cooldown:', error);
+    logger.errorSync('Error checking cooldown', {
+      operation: 'check-cooldown',
+      playerId,
+      crimeId,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return { canCommit: true, timeRemaining: 0 };
   }
 }

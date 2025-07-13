@@ -6,6 +6,7 @@ import * as crypto from 'crypto';
 import { Player } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
 import { getJWTSecret } from '../../shared/utils';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -20,7 +21,12 @@ interface CreateAccountRequest {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Create account request:', event.body);
+  const requestId = event.requestContext.requestId;
+  await logger.info('Create account request initiated', {
+    requestId,
+    operation: 'create-account',
+    hasBody: !!event.body
+  });
 
   try {
     if (!event.body) {
@@ -124,7 +130,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('Create account error:', error);
+    await logger.error('Create account error', {
+      requestId,
+      operation: 'create-account',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -162,7 +173,11 @@ async function checkUsernameExists(username: string): Promise<boolean> {
     
     return !!(result.Items && result.Items.length > 0);
   } catch (error) {
-    console.error('Error checking username:', error);
+    logger.errorSync('Error checking username', {
+      operation: 'check-username-exists',
+      username,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return true; // Assume taken on error to be safe
   }
 }

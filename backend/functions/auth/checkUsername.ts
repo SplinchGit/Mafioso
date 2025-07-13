@@ -1,6 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -10,7 +11,12 @@ const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players';
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Check username request:', event.queryStringParameters);
+  const requestId = event.requestContext.requestId;
+  await logger.info('Check username request initiated', {
+    requestId,
+    operation: 'check-username',
+    username: event.queryStringParameters?.username
+  });
 
   try {
     const username = event.queryStringParameters?.username;
@@ -66,7 +72,13 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('Check username error:', error);
+    await logger.error('Check username error', {
+      requestId,
+      operation: 'check-username',
+      username: event.queryStringParameters?.username,
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -104,7 +116,11 @@ async function checkUsernameExists(username: string): Promise<boolean> {
     
     return !!(result.Items && result.Items.length > 0);
   } catch (error) {
-    console.error('Error checking username:', error);
+    logger.errorSync('Error checking username', {
+      operation: 'check-username-exists',
+      username,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return true; // Assume taken on error to be safe
   }
 }

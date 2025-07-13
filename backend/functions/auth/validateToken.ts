@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-
 import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { getJWTSecret } from '../../shared/utils';
+import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -21,7 +22,12 @@ interface TokenPayload {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('Token validation request');
+  const requestId = event.requestContext.requestId;
+  await logger.info('Token validation request initiated', {
+    requestId,
+    operation: 'validate-token',
+    hasAuthHeader: !!(event.headers.Authorization || event.headers.authorization)
+  });
 
   try {
     const authHeader = event.headers.Authorization || event.headers.authorization;
@@ -125,7 +131,12 @@ export const handler = async (
     };
 
   } catch (error) {
-    console.error('Token validation error:', error);
+    await logger.error('Token validation error', {
+      requestId,
+      operation: 'validate-token',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     
     return {
       statusCode: 500,
@@ -152,7 +163,11 @@ async function getPlayerByWallet(walletAddress: string): Promise<Player | null> 
     
     return result.Item as Player || null;
   } catch (error) {
-    console.error('Error getting player by wallet:', error);
+    logger.errorSync('Error getting player by wallet', {
+      operation: 'get-player-by-wallet',
+      walletAddress,
+      error: error instanceof Error ? error.message : String(error)
+    });
     return null;
   }
 }
@@ -168,6 +183,10 @@ async function updatePlayerLastActive(walletAddress: string): Promise<void> {
       }
     }));
   } catch (error) {
-    console.error('Error updating last active:', error);
+    logger.errorSync('Error updating last active', {
+      operation: 'update-last-active',
+      walletAddress,
+      error: error instanceof Error ? error.message : String(error)
+    });
   }
 }
