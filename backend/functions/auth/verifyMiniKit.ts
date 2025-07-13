@@ -1,4 +1,5 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/minikit-js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
@@ -13,17 +14,10 @@ const docClient = DynamoDBDocumentClient.from(client);
 const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players';
 const WORLD_ID_TABLE = process.env.WORLD_ID_TABLE || 'mafioso-worldid';
 
-interface WorldIdVerifyRequest {
-  nullifier_hash: string;
-  merkle_root: string;
-  proof: string;
-  verification_level: 'orb' | 'device';
-}
-
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  console.log('World ID verification request:', event.body);
+  console.log('MiniKit verification request:', event.body);
 
   try {
     if (!event.body) {
@@ -42,39 +36,17 @@ export const handler = async (
       };
     }
 
-    const requestData: WorldIdVerifyRequest = JSON.parse(event.body);
-    const { nullifier_hash, merkle_root, proof, verification_level } = requestData;
+    const payload: ISuccessResult = JSON.parse(event.body);
 
     // Get secrets from Secrets Manager
     const jwtSecret = await getJWTSecret();
-
-    // Validate required fields
-    if (!nullifier_hash || !merkle_root || !proof) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Missing required World ID verification fields'
-        })
-      };
-    }
-
-    // In production, verify the proof with World ID API
-    // For now, we'll assume verification is successful
-    const isProofValid = await verifyWorldIdProof({
-      nullifier_hash,
-      merkle_root,
-      proof,
-      verification_level
-    });
-
-    if (!isProofValid) {
+    
+    // Verify the proof with World ID cloud service
+    const app_id = process.env.WORLD_ID_APP_ID as `app_${string}` || 'app_bc75ea0f4623eb64e1814126df474de3' as `app_${string}`;
+    
+    const verifyRes = await verifyCloudProof(payload, app_id, 'login', '');
+    
+    if (!verifyRes.success) {
       return {
         statusCode: 400,
         headers: {
@@ -91,7 +63,7 @@ export const handler = async (
     }
 
     // Check if this World ID has been used before
-    const existingVerification = await getWorldIdVerification(nullifier_hash);
+    const existingVerification = await getWorldIdVerification(payload.nullifier_hash);
     
     let player: Player;
     
@@ -111,8 +83,8 @@ export const handler = async (
       // Store World ID verification
       await storeWorldIdVerification({
         worldId,
-        nullifierHash: nullifier_hash,
-        proof,
+        nullifierHash: payload.nullifier_hash,
+        proof: payload.proof,
         verified: true,
         timestamp: new Date().toISOString()
       });
@@ -141,15 +113,13 @@ export const handler = async (
       },
       body: JSON.stringify({
         success: true,
-        data: {
-          player,
-          token
-        }
+        player,
+        token
       })
     };
 
   } catch (error) {
-    console.error('World ID verification error:', error);
+    console.error('MiniKit verification error:', error);
     
     return {
       statusCode: 500,
@@ -166,32 +136,6 @@ export const handler = async (
     };
   }
 };
-
-async function verifyWorldIdProof(_data: WorldIdVerifyRequest): Promise<boolean> {
-  // In production, this would call the World ID API to verify the proof
-  // For development, we'll return true
-  
-  // Example World ID verification call:
-  // const response = await fetch('https://developer.worldcoin.org/api/v1/verify', {
-  //   method: 'POST',
-  //   headers: {
-  //     'Content-Type': 'application/json',
-  //     'Authorization': `Bearer ${process.env.WORLD_ID_API_KEY}`
-  //   },
-  //   body: JSON.stringify({
-  //     nullifier_hash: data.nullifier_hash,
-  //     merkle_root: data.merkle_root,
-  //     proof: data.proof,
-  //     verification_level: data.verification_level,
-  //     action: 'mafioso-login',
-  //     signal: ''
-  //   })
-  // });
-  
-  // return response.ok;
-  
-  return true; // For development
-}
 
 async function getWorldIdVerification(nullifierHash: string): Promise<WorldIdVerification | null> {
   try {

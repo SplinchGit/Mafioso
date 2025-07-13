@@ -10,9 +10,12 @@ Globals:
       Variables:
         PLAYERS_TABLE: !Ref PlayersTable
         WORLD_ID_TABLE: !Ref WorldIdTable
+        NONCES_TABLE: !Ref NoncesTable
         COOLDOWNS_TABLE: !Ref CooldownsTable
         CRIME_HISTORY_TABLE: !Ref CrimeHistoryTable
-        JWT_SECRET: !Ref JWTSecret
+        JWT_SECRET_ARN: !Ref JWTSecretArn
+        WORLD_ID_SECRET_ARN: !Ref WorldIdSecretArn
+        WORLD_ID_APP_ID: !Ref WorldIdAppId
 
 Parameters:
   Stage:
@@ -21,16 +24,20 @@ Parameters:
     AllowedValues: [dev, staging, prod]
     Description: Deployment stage
   
-  JWTSecret:
+  JWTSecretArn:
     Type: String
-    NoEcho: true
-    Description: JWT signing secret
-    Default: mafioso-dev-secret-change-in-production
+    Description: ARN of the JWT secret in AWS Secrets Manager
+    Default: ""
+  
+  WorldIdSecretArn:
+    Type: String
+    Description: ARN of the World ID API key secret in AWS Secrets Manager
+    Default: ""
   
   WorldIdAppId:
     Type: String
     Description: World ID App ID
-    Default: app_staging_123456789
+    Default: app_bc75ea0f4623eb64e1814126df474de3
 
 Resources:
   # API Gateway
@@ -49,14 +56,18 @@ Resources:
     Properties:
       CodeUri: ../backend/functions/auth/
       Handler: verifyWorldId.handler
-      Environment:
-        Variables:
-          WORLD_ID_APP_ID: !Ref WorldIdAppId
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - DynamoDBCrudPolicy:
             TableName: !Ref WorldIdTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
       Events:
         VerifyWorldId:
           Type: Api
@@ -65,6 +76,148 @@ Resources:
             Path: /auth/verify-worldid
             Method: post
 
+  VerifyMiniKitFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: verifyMiniKit.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref WorldIdTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        VerifyMiniKit:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/verify-minikit
+            Method: post
+
+  NonceFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: nonce.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoncesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        GetNonce:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/nonce
+            Method: get
+
+  WalletLoginFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: walletLogin.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref NoncesTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        WalletLogin:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/wallet-login
+            Method: post
+
+  CreateAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: createAccount.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        CreateAccount:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/create-account
+            Method: post
+
+  CheckUsernameFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: checkUsername.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        CheckUsername:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/check-username
+            Method: get
+
+  ValidateTokenFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/functions/auth/
+      Handler: validateToken.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+                - !Ref WorldIdSecretArn
+      Events:
+        ValidateToken:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/validate
+            Method: get
+
   # DynamoDB Tables
   PlayersTable:
     Type: AWS::DynamoDB::Table
@@ -72,11 +225,20 @@ Resources:
       TableName: !Sub 'mafioso-${Stage}-players'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: worldId
+        - AttributeName: walletAddress
+          AttributeType: S
+        - AttributeName: username
           AttributeType: S
       KeySchema:
-        - AttributeName: worldId
+        - AttributeName: walletAddress
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: username-index
+          KeySchema:
+            - AttributeName: username
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
 
   WorldIdTable:
     Type: AWS::DynamoDB::Table
@@ -89,6 +251,21 @@ Resources:
       KeySchema:
         - AttributeName: nullifierHash
           KeyType: HASH
+
+  NoncesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'mafioso-${Stage}-nonces'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: nonce
+          AttributeType: S
+      KeySchema:
+        - AttributeName: nonce
+          KeyType: HASH
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
 
   CooldownsTable:
     Type: AWS::DynamoDB::Table

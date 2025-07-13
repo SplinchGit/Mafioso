@@ -1,58 +1,99 @@
-import { useState } from 'react';
-import { IDKitWidget, VerificationLevel, type ISuccessResult, type IErrorState } from '@worldcoin/idkit';
+import { useState, useEffect } from 'react';
+import { MiniKit, MiniAppWalletAuthSuccessPayload } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
+import ChooseUsername from '../components/ChooseUsername';
 
 const Login = () => {
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isMiniKitInstalled, setIsMiniKitInstalled] = useState(false);
+  const [showUsernameSelection, setShowUsernameSelection] = useState(false);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const { setPlayer, setError } = useGameStore();
 
-  const handleWorldIdSuccess = async (result: ISuccessResult) => {
-    setIsVerifying(true);
-    setVerificationError(null);
+  useEffect(() => {
+    setIsMiniKitInstalled(MiniKit.isInstalled());
+  }, []);
+
+  const handleWalletAuth = async () => {
+    if (!MiniKit.isInstalled()) {
+      setAuthError('Please open this app in the World App');
+      return;
+    }
+
+    setIsAuthenticating(true);
+    setAuthError(null);
 
     try {
-      // Send verification to backend
-      const response = await fetch('/api/auth/verify-worldid', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          nullifier_hash: result.nullifier_hash,
-          merkle_root: result.merkle_root,
-          proof: result.proof,
-          verification_level: result.verification_level
-        })
+      // Get nonce from backend
+      const nonceResponse = await fetch('/api/auth/nonce');
+      if (!nonceResponse.ok) {
+        throw new Error('Failed to get nonce');
+      }
+      const { nonce } = await nonceResponse.json();
+
+      // Use walletAuth instead of verify
+      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
+        nonce: nonce,
+        statement: 'Sign in to Mafioso',
+        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
       });
 
-      const data = await response.json();
+      if (finalPayload.status === 'success') {
+        const payload = finalPayload as MiniAppWalletAuthSuccessPayload;
+        
+        // Send wallet auth to backend
+        const response = await fetch('/api/auth/wallet-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ payload, nonce })
+        });
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Verification failed');
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Authentication failed');
+        }
+
+        if (data.hasAccount) {
+          // Existing account - auto login
+          localStorage.setItem('auth_token', data.token);
+          setPlayer(data.player);
+        } else {
+          // New account - show username selection
+          setWalletAddress(payload.address);
+          setShowUsernameSelection(true);
+        }
+      } else {
+        throw new Error('Wallet authentication failed');
       }
 
-      // Store auth token
-      localStorage.setItem('auth_token', data.token);
-      
-      // Update game state
-      setPlayer(data.player);
-
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Verification failed';
-      setVerificationError(errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      setAuthError(errorMessage);
       setError(errorMessage);
     } finally {
-      setIsVerifying(false);
+      setIsAuthenticating(false);
     }
   };
 
-  const handleWorldIdError = (error: IErrorState) => {
-    console.error('World ID verification error:', error);
-    const errorMessage = error.message || 'World ID verification failed. Please try again.';
-    setVerificationError(errorMessage);
-    setError(errorMessage);
+  const handleUsernameSelected = (player: any, token: string) => {
+    localStorage.setItem('auth_token', token);
+    setPlayer(player);
+    setShowUsernameSelection(false);
   };
+
+  if (showUsernameSelection && walletAddress) {
+    return (
+      <ChooseUsername 
+        walletAddress={walletAddress}
+        onUsernameSelected={handleUsernameSelected}
+        onBack={() => setShowUsernameSelection(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -80,43 +121,46 @@ const Login = () => {
           </div>
         </div>
 
-        {verificationError && (
+        {authError && (
           <div className="bg-blood/20 border border-blood rounded-lg p-3 mb-6">
-            <p className="text-blood text-sm">{verificationError}</p>
+            <p className="text-blood text-sm">{authError}</p>
           </div>
         )}
 
         <div className="space-y-4">
-          {isVerifying ? (
+          {!isMiniKitInstalled && (
+            <div className="bg-yellow-600/20 border border-yellow-600 rounded-lg p-3 mb-6">
+              <p className="text-yellow-200 text-sm">
+                Please open this app in the World App to use wallet authentication
+              </p>
+            </div>
+          )}
+
+          {isAuthenticating ? (
             <div className="flex items-center justify-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mafia-red"></div>
-              <span className="ml-3 text-mafia-gray-400">Verifying identity...</span>
+              <span className="ml-3 text-mafia-gray-400">Authenticating...</span>
             </div>
           ) : (
-            <IDKitWidget
-              app_id={import.meta.env.VITE_WORLDCOIN_APP_ID || "app_staging_123456789"}
-              action="login"
-              onSuccess={handleWorldIdSuccess}
-              onError={handleWorldIdError}
-              verification_level={VerificationLevel.Orb}
+            <button
+              onClick={handleWalletAuth}
+              disabled={!isMiniKitInstalled}
+              className={`w-full text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200 ${
+                isMiniKitInstalled 
+                  ? 'btn-mafia' 
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+              }`}
             >
-              {({ open }) => (
-                <button
-                  onClick={open}
-                  className="w-full btn-mafia text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200"
-                >
-                  🌍 Verify with World ID
-                </button>
-              )}
-            </IDKitWidget>
+              👛 Sign in with Wallet
+            </button>
           )}
 
           <div className="text-xs text-mafia-gray-500 mt-4">
-            <p>World ID verification ensures:</p>
+            <p>Wallet authentication provides:</p>
             <ul className="mt-2 space-y-1">
-              <li>• One account per person</li>
-              <li>• Fair gameplay for everyone</li>
-              <li>• Secure identity verification</li>
+              <li>• Automatic account recovery</li>
+              <li>• No passwords to remember</li>
+              <li>• Secure wallet-based identity</li>
             </ul>
           </div>
         </div>

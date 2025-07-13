@@ -25,7 +25,8 @@
       "Bash(npm ls:*)",
       "Bash(ncu)",
       "Bash(npm update:*)",
-      "Bash(ncu:*)"
+      "Bash(ncu:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }

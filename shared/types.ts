@@ -1,8 +1,9 @@
 import type { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
 
 export interface Player {
-  worldId: string;
-  username: string;
+  walletAddress: string; // Primary key - permanent identifier
+  worldId: string;       // Internal game ID
+  username: string;      // Can change on death
   money: number;
   respect: number;
   nerve: number;

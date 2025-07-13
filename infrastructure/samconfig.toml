@@ -7,5 +7,5 @@ s3_prefix = "mafioso-backend"
 region = "eu-west-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Stage=\"prod\" WorldIdAppId=\"app_bc75ea0f4623eb64e1814126df474de3\""
+parameter_overrides = "Stage=\"prod\" WorldIdAppId=\"app_bc75ea0f4623eb64e1814126df474de3\" JWTSecretArn=\"arn:aws:secretsmanager:eu-west-2:152034782674:secret:Mafioso_JWT-rY4ENa\" WorldIdSecretArn=\"arn:aws:secretsmanager:eu-west-2:152034782674:secret:Mafioso_APIKey-o92Bbh\""
 image_repositories = []

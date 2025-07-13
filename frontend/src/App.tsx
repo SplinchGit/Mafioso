@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Amplify } from 'aws-amplify';
 import { useGameStore } from './store/gameStore';
+import { useInactivityLogout } from './hooks';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Crimes from './pages/Crimes';
@@ -27,6 +28,9 @@ Amplify.configure(amplifyConfig);
 
 function App() {
   const { player, isLoading, error, setLoading } = useGameStore();
+  
+  // Set up inactivity logout
+  useInactivityLogout();
 
   useEffect(() => {
     // Initialize app state on load
@@ -48,8 +52,12 @@ function App() {
             const data = await response.json();
             useGameStore.getState().setPlayer(data.player);
           } else {
-            // Invalid token, clear it
+            // Invalid token or inactivity timeout, clear it
             localStorage.removeItem('auth_token');
+            const errorData = await response.json().catch(() => ({}));
+            if (errorData.code === 'INACTIVITY_TIMEOUT') {
+              useGameStore.getState().setError('Session expired due to inactivity. Please sign in again.');
+            }
           }
         } catch (error) {
           console.error('Failed to validate token:', error);
