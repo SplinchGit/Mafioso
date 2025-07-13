@@ -2,7 +2,6 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as crypto from 'crypto';
-import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -13,7 +12,8 @@ export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext.requestId;
-  logger.infoSync('Nonce generation request', {
+  console.log('Nonce function started', { requestId, timestamp: new Date().toISOString() });
+  console.log('Nonce generation request', {
     requestId,
     operation: 'generate-nonce'
   });
@@ -34,6 +34,7 @@ export const handler = async (
       }
     }));
 
+    console.log('Nonce generated successfully', { requestId, nonce });
     return {
       statusCode: 200,
       headers: {
@@ -49,7 +50,7 @@ export const handler = async (
     };
 
   } catch (error) {
-    logger.errorSync('Nonce generation error', {
+    console.error('Nonce generation error', {
       requestId,
       operation: 'generate-nonce',
       error: error instanceof Error ? error.message : String(error),

@@ -15,9 +15,10 @@ export class CloudWatchLogger {
   private logStreamName: string;
   private sequenceToken?: string;
 
-  constructor(logGroupName: string = '/aws/lambda/mafioso') {
+  constructor(logGroupName?: string) {
     this.client = new CloudWatchLogsClient({ region: process.env.AWS_REGION || 'us-east-1' });
-    this.logGroupName = logGroupName;
+    // Use the actual Lambda log group name from environment or construct it
+    this.logGroupName = logGroupName || `/aws/lambda/${process.env.AWS_LAMBDA_FUNCTION_NAME}` || '/aws/lambda/mafioso';
     this.logStreamName = this.generateLogStreamName();
   }
 
