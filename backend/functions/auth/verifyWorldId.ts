@@ -5,7 +5,7 @@ import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
-import { getJWTSecret, getWorldIdApiKey } from '../../shared/utils';
+import { getJWTSecret } from '../../shared/utils';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -224,6 +224,7 @@ async function createNewPlayer(worldId: string, username: string): Promise<Playe
   const now = new Date().toISOString();
   
   const newPlayer: Player = {
+    walletAddress: '', // Empty for World ID only verification
     worldId,
     username,
     money: GAME_CONFIG.STARTING_MONEY,

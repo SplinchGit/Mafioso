@@ -9,7 +9,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 const NONCES_TABLE = process.env.NONCES_TABLE || 'mafioso-nonces';
 
 export const handler = async (
-  event: APIGatewayProxyEvent
+  _event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   console.log('Nonce generation request');
 

@@ -102,7 +102,7 @@ async function checkUsernameExists(username: string): Promise<boolean> {
       Limit: 1
     }));
     
-    return result.Items && result.Items.length > 0;
+    return !!(result.Items && result.Items.length > 0);
   } catch (error) {
     console.error('Error checking username:', error);
     return true; // Assume taken on error to be safe

@@ -1,12 +1,12 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { verifyCloudProof, IVerifyResponse, ISuccessResult } from '@worldcoin/minikit-js';
+import { verifyCloudProof, ISuccessResult } from '@worldcoin/minikit-js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
-import { getJWTSecret, getWorldIdApiKey } from '../../shared/utils';
+import { getJWTSecret } from '../../shared/utils';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -78,7 +78,7 @@ export const handler = async (
       const worldId = generateWorldId();
       const username = generateUsername();
       
-      player = await createNewPlayer(worldId, username);
+      player = await createNewPlayer('', worldId, username);
       
       // Store World ID verification
       await storeWorldIdVerification({
@@ -164,10 +164,11 @@ async function getPlayerByWorldId(worldId: string): Promise<Player> {
   return result.Item as Player;
 }
 
-async function createNewPlayer(worldId: string, username: string): Promise<Player> {
+async function createNewPlayer(walletAddress: string, worldId: string, username: string): Promise<Player> {
   const now = new Date().toISOString();
   
   const newPlayer: Player = {
+    walletAddress,
     worldId,
     username,
     money: GAME_CONFIG.STARTING_MONEY,
