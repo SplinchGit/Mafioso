@@ -250,10 +250,6 @@ function validateCrimeAttempt(player: Player, crime: typeof CRIMES[number]): { c
     return { canCommit: false, reason: `Requires ${requiredRank.name} rank` };
   }
 
-  // Check nerve requirement
-  if (player.nerve < crime.nerve) {
-    return { canCommit: false, reason: `Requires ${crime.nerve} nerve (you have ${player.nerve})` };
-  }
 
   return { canCommit: true };
 }
@@ -296,59 +292,61 @@ async function checkCrimeCooldown(playerId: string, crimeId: number): Promise<{ 
 }
 
 function calculateCrimeResult(player: Player, crime: typeof CRIMES[number]): CrimeResult {
-  // Calculate success chance
-  const baseSuccess = crime.baseSuccess;
-  const rankBonus = Math.min(player.rank * 2, 20); // Max 20% bonus from rank
-  const nerveBonus = Math.min((player.nerve / 100) * 10, 10); // Max 10% bonus from nerve
-  const successChance = Math.min(95, baseSuccess + rankBonus + nerveBonus);
-
+  // Use fixed success rate from crime definition
   const roll = Math.random() * 100;
-  const isSuccess = roll <= successChance;
+  const isSuccess = roll < crime.baseSuccess;
 
   if (isSuccess) {
-    // Successful crime
-    const moneyGained = Math.floor(
-      Math.random() * (crime.basePayout.max - crime.basePayout.min) + crime.basePayout.min
-    );
-    const respectGained = crime.baseRespect;
-
-    return {
-      success: true,
-      outcome: CRIME_OUTCOMES.SUCCESS,
-      moneyGained,
-      respectGained,
-      message: `Successfully committed ${crime.name}! You made off with the loot.`
-    };
-  } else {
-    // Failed crime - determine consequence
-    const consequenceRoll = Math.random() * 100;
-    
-    if (consequenceRoll < 30) {
-      // Jail
-      const jailTime = GAME_CONFIG.JAIL_TIME_BASE + Math.random() * GAME_CONFIG.JAIL_TIME_BASE;
+    // Check if this is Grand Theft Auto (special car reward)
+    if (crime.name === "Grand Theft Auto") {
+      // Award random car instead of money
+      const CARS = [
+        { id: 0, name: "Fiat 500" },
+        { id: 1, name: "Ford Focus" },
+        { id: 2, name: "Honda Civic" },
+        { id: 3, name: "BMW 3 Series" },
+        { id: 4, name: "Audi A4" },
+        { id: 5, name: "Mercedes C-Class" },
+        { id: 6, name: "Porsche 911" },
+        { id: 7, name: "Ferrari 458" },
+        { id: 8, name: "Lamborghini Huracán" },
+        { id: 9, name: "Bugatti Veyron" },
+        { id: 10, name: "Ferrari LaFerrari" }
+      ];
+      const randomCar = CARS[Math.floor(Math.random() * CARS.length)];
+      
       return {
-        success: false,
-        outcome: CRIME_OUTCOMES.JAIL,
-        message: `You were caught committing ${crime.name} and thrown in jail!`,
-        jailTime: jailTime
-      };
-    } else if (consequenceRoll < 50) {
-      // Hospital
-      const hospitalTime = GAME_CONFIG.HOSPITAL_TIME_BASE + Math.random() * GAME_CONFIG.HOSPITAL_TIME_BASE;
-      return {
-        success: false,
-        outcome: CRIME_OUTCOMES.HOSPITAL,
-        message: `You were injured during ${crime.name} and hospitalized!`,
-        hospitalTime: hospitalTime
+        success: true,
+        outcome: CRIME_OUTCOMES.SUCCESS,
+        respectGained: crime.baseRespect,
+        message: `Successfully stole a ${randomCar.name}! It's now in your garage.`,
+        carAwarded: randomCar.id
       };
     } else {
-      // Simple failure
+      // Successful crime with money payout
+      const moneyGained = Math.floor(
+        Math.random() * (crime.basePayout.max - crime.basePayout.min + 1) + crime.basePayout.min
+      );
+      const respectGained = crime.baseRespect;
+
       return {
-        success: false,
-        outcome: CRIME_OUTCOMES.FAILURE,
-        message: `You failed to commit ${crime.name}. Better luck next time.`
+        success: true,
+        outcome: CRIME_OUTCOMES.SUCCESS,
+        moneyGained,
+        respectGained,
+        message: `Successfully committed ${crime.name}! You made off with the loot.`
       };
     }
+  } else {
+    // Failed crime - all failures result in jail time
+    const jailTime = (crime as any).jailTime || 60; // Default to 60 seconds if not specified
+    
+    return {
+      success: false,
+      outcome: CRIME_OUTCOMES.JAIL,
+      message: `You were caught committing ${crime.name} and thrown in jail!`,
+      jailTime: jailTime
+    };
   }
 }
 
@@ -356,7 +354,6 @@ async function processCrimeResult(player: Player, crime: typeof CRIMES[number], 
   const now = new Date().toISOString();
   
   const updates: Partial<Player> = {
-    nerve: Math.max(0, player.nerve - crime.nerve),
     lastActive: now,
     stats: {
       ...player.stats,
@@ -367,8 +364,20 @@ async function processCrimeResult(player: Player, crime: typeof CRIMES[number], 
   };
 
   if (result.success) {
+    // Handle car reward for Grand Theft Auto
+    if ((result as any).carAwarded !== undefined) {
+      updates.carId = (result as any).carAwarded;
+    }
+    
     updates.money = player.money + (result.moneyGained || 0);
-    updates.respect = player.respect + (result.respectGained || 0);
+    
+    // Only award respect if not at max rank (Infamous Mafioso)
+    const maxRank = RANKS.length - 1;
+    if (player.rank < maxRank) {
+      updates.respect = player.respect + (result.respectGained || 0);
+    } else {
+      updates.respect = player.respect; // Keep existing respect, no more gains
+    }
     
     if (updates.stats) {
       updates.stats.totalMoneyEarned = player.stats.totalMoneyEarned + (result.moneyGained || 0);
@@ -384,18 +393,11 @@ async function processCrimeResult(player: Player, crime: typeof CRIMES[number], 
       }
     }
   } else {
-    // Handle consequences
+    // Handle jail time (no more hospital outcomes)
     if (result.jailTime) {
       updates.jailUntil = new Date(Date.now() + result.jailTime * 1000).toISOString();
       if (updates.stats) {
         updates.stats.timesJailed = player.stats.timesJailed + 1;
-      }
-    }
-    
-    if (result.hospitalTime) {
-      updates.hospitalUntil = new Date(Date.now() + result.hospitalTime * 1000).toISOString();
-      if (updates.stats) {
-        updates.stats.timesHospitalized = player.stats.timesHospitalized + 1;
       }
     }
   }

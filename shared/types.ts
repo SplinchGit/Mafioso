@@ -6,7 +6,6 @@ export interface Player {
   username: string;      // Can change on death
   money: number;
   respect: number;
-  nerve: number;
   rank: number;
   city: number;
   carId?: number;
@@ -36,6 +35,7 @@ export interface CrimeResult {
   message: string;
   jailTime?: number;
   hospitalTime?: number;
+  carAwarded?: number;
 }
 
 export interface CrimeAttempt {

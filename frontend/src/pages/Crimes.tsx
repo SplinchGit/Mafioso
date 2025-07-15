@@ -14,7 +14,7 @@ const Crimes = () => {
   const availableCrimes = CRIMES.filter(crime => crime.requiredRank <= player.rank);
 
   const handleCommitCrime = async (crimeId: number) => {
-    if (!player || player.nerve < CRIMES[crimeId].nerve) return;
+    if (!player) return;
 
     const result = await commitCrime(crimeId);
     if (result) {
@@ -24,15 +24,11 @@ const Crimes = () => {
   };
 
   const getCrimeSuccessChance = (crime: CrimeType) => {
-    // Basic calculation - would be more complex in real implementation
-    const baseSuccess = crime.baseSuccess;
-    const rankBonus = player.rank * 2;
-    const nerveBonus = (player.nerve / 100) * 10;
-    return Math.min(95, baseSuccess + rankBonus + nerveBonus);
+    // Fixed success rate from crime definition
+    return crime.baseSuccess;
   };
 
   const canCommitCrime = (crime: CrimeType) => {
-    if (player.nerve < crime.nerve) return false;
     if (useGameStore.getState().isInJail() || useGameStore.getState().isInHospital()) return false;
     return true;
   };
@@ -48,11 +44,7 @@ const Crimes = () => {
 
       {/* Player Status */}
       <div className="card-mafia mb-8">
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-white text-xl font-bold">{player.nerve}/100</div>
-            <div className="text-mafia-gray-400 text-sm">Nerve</div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 text-center">
           <div>
             <div className="text-mafia-gold text-xl font-bold">{currentRank.name}</div>
             <div className="text-mafia-gray-400 text-sm">Current Rank</div>
@@ -153,11 +145,6 @@ const Crimes = () => {
                 </div>
                 
                 <div className="flex justify-between">
-                  <span className="text-mafia-gray-400">Nerve Cost:</span>
-                  <span className="text-white font-semibold">{crime.nerve}</span>
-                </div>
-                
-                <div className="flex justify-between">
                   <span className="text-mafia-gray-400">Cooldown:</span>
                   <span className="text-white font-semibold">
                     {Math.round(crime.cooldown / 60)} min
@@ -165,13 +152,6 @@ const Crimes = () => {
                 </div>
               </div>
 
-              {!canCommit && player.nerve < crime.nerve && (
-                <div className="bg-blood/20 border border-blood rounded p-2 mb-4">
-                  <p className="text-blood text-xs">
-                    Not enough nerve ({crime.nerve} required)
-                  </p>
-                </div>
-              )}
 
               <button
                 onClick={() => handleCommitCrime(crime.id)}

@@ -76,7 +76,6 @@ export interface GameCrime {
   baseRespect: number;
   requiredRank: number;
   cooldown: number;
-  nerve: number;
 }
 
 // If Player type is missing, add:
@@ -85,8 +84,6 @@ export interface Player {
   username: string;
   money: number;
   respect: number;
-  nerve: number;
-  maxNerve: number;
   rank: number;
   city: string;
   carId: string | null;
@@ -107,7 +104,6 @@ export interface CrimeCardProps {
   onCommit: (crimeId: number) => void;
   disabled?: boolean;
   playerRank: number;
-  playerNerve: number;
 }
 
 export interface PlayerStatsProps {

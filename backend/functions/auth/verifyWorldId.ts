@@ -244,7 +244,6 @@ async function createNewPlayer(worldId: string, username: string): Promise<Playe
     username,
     money: GAME_CONFIG.STARTING_MONEY,
     respect: GAME_CONFIG.STARTING_RESPECT,
-    nerve: GAME_CONFIG.STARTING_NERVE,
     rank: 0,
     city: 0, // Start in London
     lastActive: now,

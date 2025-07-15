@@ -191,7 +191,6 @@ async function createNewPlayer(walletAddress: string, username: string, worldId:
     username,
     money: GAME_CONFIG.STARTING_MONEY,
     respect: GAME_CONFIG.STARTING_RESPECT,
-    nerve: GAME_CONFIG.STARTING_NERVE,
     rank: 0,
     city: 0, // Start in London
     lastActive: now,

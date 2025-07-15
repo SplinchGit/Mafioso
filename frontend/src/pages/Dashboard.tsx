@@ -69,29 +69,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Nerve Card */}
-        <div className="card-mafia">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-2">⚡ Nerve</h3>
-              <p className="text-white text-2xl font-bold">
-                {player.nerve}/100
-              </p>
-              <div className="mt-2">
-                <div className="w-full bg-mafia-gray-700 rounded-full h-2">
-                  <div 
-                    className="bg-mafia-red h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${player.nerve}%` }}
-                  ></div>
-                </div>
-                <div className="text-xs text-mafia-gray-400 mt-1">
-                  Regenerates 1 per minute
-                </div>
-              </div>
-            </div>
-            <div className="text-4xl opacity-50">💪</div>
-          </div>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -173,7 +150,7 @@ const Dashboard = () => {
           
           <div className="mt-4 p-3 bg-mafia-gray-700 rounded-lg">
             <p className="text-sm text-mafia-gray-400 text-center">
-              💡 Tip: Higher nerve increases crime success rates!
+              💡 Tip: Higher ranks unlock more profitable crimes!
             </p>
           </div>
         </div>

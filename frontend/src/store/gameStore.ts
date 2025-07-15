@@ -187,9 +187,7 @@ export const useGameStore = create<GameStore>()(
           // Check if player is in jail or hospital
           if (get().isInJail() || get().isInHospital()) return false;
 
-          // Check if player has enough nerve
-          // This would check against CRIMES[crimeId].nerve
-          return player.nerve > 0;
+          return true;
         },
 
         getTimeUntilFree: () => {
