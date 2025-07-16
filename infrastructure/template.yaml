@@ -90,8 +90,17 @@ Resources:
   VerifyMiniKitFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/auth/
-      Handler: verifyMiniKit.handler
+      CodeUri: ../backend/
+      Handler: dist/backend/functions/auth/verifyMiniKit.handler
+      Runtime: nodejs18.x
+      Metadata:
+        BuildMethod: esbuild
+        BuildProperties:
+          Minify: true
+          Target: "es2020"
+          Sourcemap: true
+          EntryPoints: 
+            - functions/auth/verifyMiniKit.ts
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
