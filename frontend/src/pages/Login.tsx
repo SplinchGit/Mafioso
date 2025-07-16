@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
+import { MiniKit, VerificationLevel, type VerifyCommandInput, type ISuccessResult } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 import { useAuth } from '../hooks/useAuth';
 
