@@ -66,7 +66,7 @@ export const useAuth = () => {
       }
 
       // Send to backend for verification
-      const response = await fetch('/api/auth/verify-miniapp', {
+      const response = await fetch('/api/auth/verify-minikit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
