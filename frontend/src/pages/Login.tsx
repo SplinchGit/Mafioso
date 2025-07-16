@@ -2,123 +2,18 @@ import { useState, useEffect } from 'react';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 import { useAuth } from '../hooks/useAuth';
-import ChooseUsername from '../components/ChooseUsername';
-import { triggerWalletAuth } from '../utils/minikit';
 
 const Login = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isMiniKitInstalled, setIsMiniKitInstalled] = useState(false);
-  const [showUsernameSelection, setShowUsernameSelection] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const { setPlayer, setError } = useGameStore();
+  const { setError } = useGameStore();
   const { authenticateWithWorldID } = useAuth();
 
   useEffect(() => {
     setIsMiniKitInstalled(MiniKit.isInstalled());
   }, []);
 
-  const handleWalletAuth = async () => {
-    if (!MiniKit.isInstalled()) {
-      setAuthError('Please open this app in the World App');
-      return;
-    }
-
-    setIsAuthenticating(true);
-    setAuthError(null);
-
-    try {
-      // Debug: Log environment
-      console.log('[AUTH] Starting wallet auth flow');
-      console.log('[AUTH] Environment:', import.meta.env.MODE);
-      console.log('[AUTH] API Endpoint:', import.meta.env.VITE_API_ENDPOINT);
-      
-      // Get nonce with detailed error handling
-      const apiUrl = import.meta.env.PROD 
-        ? `${import.meta.env.VITE_API_ENDPOINT}/auth/nonce`
-        : '/api/auth/nonce';
-      
-      console.log('[AUTH] Fetching nonce from:', apiUrl);
-      
-      let nonceResponse;
-      try {
-        nonceResponse = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          mode: 'cors'
-        });
-        
-        console.log('[AUTH] Nonce response status:', nonceResponse.status);
-        console.log('[AUTH] Nonce response headers:', Object.fromEntries(nonceResponse.headers.entries()));
-        
-        if (!nonceResponse.ok) {
-          const errorText = await nonceResponse.text();
-          console.error('[AUTH] Nonce request failed:', errorText);
-          throw new Error(`Failed to get nonce: ${nonceResponse.status} ${errorText}`);
-        }
-      } catch (fetchError) {
-        console.error('[AUTH] Fetch error details:', {
-          message: fetchError instanceof Error ? fetchError.message : String(fetchError),
-          stack: fetchError instanceof Error ? fetchError.stack : undefined,
-          type: fetchError instanceof Error ? fetchError.name : typeof fetchError
-        });
-        throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
-      }
-      
-      const nonceData = await nonceResponse.json();
-      console.log('[AUTH] Nonce received:', nonceData);
-      
-      if (!nonceData.success || !nonceData.nonce) {
-        throw new Error('Invalid nonce response');
-      }
-
-      // Trigger wallet auth
-      console.log('[AUTH] Triggering MiniKit wallet auth');
-      const payload = await triggerWalletAuth(nonceData.nonce);
-      console.log('[AUTH] Wallet auth successful:', payload);
-      
-      // Send to backend
-      const loginUrl = import.meta.env.PROD
-        ? `${import.meta.env.VITE_API_ENDPOINT}/auth/wallet-login`
-        : '/api/auth/wallet-login';
-      
-      console.log('[AUTH] Sending login request to:', loginUrl);
-      
-      const response = await fetch(loginUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payload, nonce: nonceData.nonce }),
-        mode: 'cors'
-      });
-
-      console.log('[AUTH] Login response:', response.status);
-      
-      const data = await response.json();
-      if (!response.ok) {
-        console.error('[AUTH] Login failed:', data);
-        throw new Error(data.error);
-      }
-
-      console.log('[AUTH] Login successful:', data);
-      
-      if (data.hasAccount) {
-        localStorage.setItem('auth_token', data.token);
-        setPlayer(data.player);
-      } else {
-        setWalletAddress(payload.address);
-        setShowUsernameSelection(true);
-      }
-    } catch (error) {
-      console.error('[AUTH] Complete error:', error);
-      const msg = error instanceof Error ? error.message : 'Authentication failed';
-      setAuthError(msg);
-      setError(msg);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
 
   const handleWorldIDAuth = async () => {
     setIsAuthenticating(true);
@@ -138,21 +33,6 @@ const Login = () => {
     }
   };
 
-  const handleUsernameSelected = (player: any, token: string) => {
-    localStorage.setItem('auth_token', token);
-    setPlayer(player);
-    setShowUsernameSelection(false);
-  };
-
-  if (showUsernameSelection && walletAddress) {
-    return (
-      <ChooseUsername 
-        walletAddress={walletAddress}
-        onUsernameSelected={handleUsernameSelected}
-        onBack={() => setShowUsernameSelection(false)}
-      />
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
@@ -212,18 +92,6 @@ const Login = () => {
                 }`}
               >
                 🌍 Sign in with World ID
-              </button>
-              
-              <button
-                onClick={handleWalletAuth}
-                disabled={!isMiniKitInstalled}
-                className={`w-full text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200 ${
-                  isMiniKitInstalled 
-                    ? 'bg-mafia-gray-700 hover:bg-mafia-gray-600 text-white border border-mafia-gray-600' 
-                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                👛 Sign in with Wallet
               </button>
             </div>
           )}

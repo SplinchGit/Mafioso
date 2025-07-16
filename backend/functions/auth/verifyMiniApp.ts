@@ -73,6 +73,15 @@ export const handler = async (
     }
 
     // Verify the proof with World ID using MiniKit
+    await logger.info('Attempting World ID verification', {
+      requestId,
+      appId: APP_ID,
+      action,
+      signal,
+      payloadExists: !!payload,
+      nullifierHash: payload?.nullifier_hash?.substring(0, 10) + '...'
+    });
+
     const verifyRes = await verifyCloudProof(
       payload,
       APP_ID as `app_${string}`,
@@ -80,7 +89,21 @@ export const handler = async (
       signal
     ) as IVerifyResponse;
 
+    await logger.info('World ID verification result', {
+      requestId,
+      success: verifyRes.success,
+      details: verifyRes
+    });
+
     if (!verifyRes.success) {
+      await logger.error('World ID verification failed', {
+        requestId,
+        verificationResult: verifyRes,
+        appId: APP_ID,
+        action,
+        signal
+      });
+
       return {
         statusCode: 400,
         headers: {

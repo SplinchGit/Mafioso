@@ -4,10 +4,9 @@ import './index.css'
 import App from './App.tsx'
 import MiniKitProvider from './providers/MiniKitProvider.tsx'
 
-// Always show Eruda for debugging
+// Initialize Eruda for debugging (click floating icon to open)
 import('eruda').then(({ default: eruda }) => {
   eruda.init();
-  eruda.show();
 });
 
 createRoot(document.getElementById('root')!).render(

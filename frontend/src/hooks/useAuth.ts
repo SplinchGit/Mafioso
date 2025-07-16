@@ -81,6 +81,12 @@ export const useAuth = () => {
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('Authentication failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          details: data.details
+        });
         throw new Error(data.error || 'Authentication failed');
       }
 
