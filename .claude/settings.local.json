@@ -33,7 +33,8 @@
       "Bash(aws cloudformation:*)",
       "Bash(aws apigateway get-resources:*)",
       "Bash(npm run validate:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(sam build:*)"
     ],
     "deny": []
   }

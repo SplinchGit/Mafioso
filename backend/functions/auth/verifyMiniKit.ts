@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { verifyCloudProof, ISuccessResult } from '@worldcoin/minikit-js';
+import { verifyCloudProof, ISuccessResult, IVerifyResponse } from '@worldcoin/minikit-js';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, WorldIdVerification } from '../../../shared/types';
@@ -14,6 +14,12 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players';
 const WORLD_ID_TABLE = process.env.WORLD_ID_TABLE || 'mafioso-worldid';
+
+interface IRequestPayload {
+  payload: ISuccessResult;
+  action: string;
+  signal?: string;
+}
 
 export const handler = async (
   event: APIGatewayProxyEvent
@@ -42,7 +48,8 @@ export const handler = async (
       };
     }
 
-    const payload: ISuccessResult = JSON.parse(event.body);
+    // Parse the request payload
+    const { payload, action, signal } = JSON.parse(event.body) as IRequestPayload;
 
     // Get secrets from Secrets Manager
     const jwtSecret = await getJWTSecret();
@@ -50,7 +57,7 @@ export const handler = async (
     // Verify the proof with World ID cloud service
     const app_id = process.env.WORLD_ID_APP_ID as `app_${string}` || 'app_bc75ea0f4623eb64e1814126df474de3' as `app_${string}`;
     
-    const verifyRes = await verifyCloudProof(payload, app_id, 'login', '');
+    const verifyRes = await verifyCloudProof(payload, app_id, action, signal || '') as IVerifyResponse;
     
     if (!verifyRes.success) {
       return {
@@ -75,16 +82,17 @@ export const handler = async (
     
     if (existingVerification) {
       // Existing player - load their data
-      player = await getPlayerByWorldId(existingVerification.worldId);
-      if (!player) {
+      const existingPlayer = await getPlayerByWorldId(existingVerification.worldId);
+      if (!existingPlayer) {
         throw new Error('Player data not found for existing World ID');
       }
+      player = existingPlayer;
     } else {
       // New player - create account
       const worldId = generateWorldId();
       const username = generateUsername();
       
-      player = await createNewPlayer('', worldId, username);
+      player = await createNewPlayer(worldId, worldId, username);
       
       // Store World ID verification
       await storeWorldIdVerification({
@@ -166,17 +174,23 @@ async function getWorldIdVerification(nullifierHash: string): Promise<WorldIdVer
   }
 }
 
-async function getPlayerByWorldId(worldId: string): Promise<Player> {
-  const result = await docClient.send(new GetCommand({
-    TableName: PLAYERS_TABLE,
-    Key: { worldId }
-  }));
-  
-  if (!result.Item) {
-    throw new Error('Player not found');
+async function getPlayerByWorldId(worldId: string): Promise<Player | null> {
+  try {
+    // Use a scan to find player by worldId since walletAddress is the primary key
+    const result = await docClient.send(new GetCommand({
+      TableName: PLAYERS_TABLE,
+      Key: { walletAddress: worldId } // Use worldId as walletAddress for World ID players
+    }));
+    
+    return result.Item as Player || null;
+  } catch (error) {
+    logger.errorSync('Error getting player by worldId', {
+      operation: 'get-player-by-worldid',
+      worldId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    return null;
   }
-  
-  return result.Item as Player;
 }
 
 async function createNewPlayer(walletAddress: string, worldId: string, username: string): Promise<Player> {
@@ -236,9 +250,23 @@ async function storeWorldIdVerification(verification: {
   }));
 }
 
-async function updatePlayerLastActive(_worldId: string): Promise<void> {
-  // This would use UpdateCommand to update lastActive timestamp
-  // Simplified for this example
+async function updatePlayerLastActive(worldId: string): Promise<void> {
+  try {
+    await docClient.send(new UpdateCommand({
+      TableName: PLAYERS_TABLE,
+      Key: { walletAddress: worldId },
+      UpdateExpression: 'SET lastActive = :timestamp',
+      ExpressionAttributeValues: {
+        ':timestamp': new Date().toISOString()
+      }
+    }));
+  } catch (error) {
+    logger.errorSync('Error updating player last active', {
+      operation: 'update-player-last-active',
+      worldId,
+      error: error instanceof Error ? error.message : String(error)
+    });
+  }
 }
 
 function generateWorldId(): string {

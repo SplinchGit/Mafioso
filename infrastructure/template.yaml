@@ -118,7 +118,7 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref MafiosoApi
-            Path: /auth/verify-minikit
+            Path: /verify
             Method: post
 
   NonceFunction:
