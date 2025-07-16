@@ -1,9 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand, BatchWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import { Player, ShootResult } from '../../../shared/types';
-import { GAME_CONFIG, RANK_DIFFERENCE_MULTIPLIERS, GUNS, PROTECTION, CARS } from '../../../shared/constants';
+import { GAME_CONFIG, RANK_DIFFERENCE_MULTIPLIERS, GUNS, PROTECTION } from '../../../shared/constants';
 import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
@@ -135,7 +135,7 @@ export const handler = async (
     }
 
     // Execute the shooting
-    const { updatedAttacker, updatedTarget, carsTransferred } = await executeShoot(player, targetPlayer, bulletsRequired);
+    const { carsTransferred } = await executeShoot(player, targetPlayer, bulletsRequired);
 
     const response: ShootResult = {
       success: true,

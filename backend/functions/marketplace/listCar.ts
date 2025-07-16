@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, CarListing, CarMarketplaceResponse } from '../../../shared/types';
@@ -141,7 +141,7 @@ export const handler = async (
 
     // Create listing
     const car = validationResult.car!;
-    const listing = await createCarListing(player, car, price);
+    await createCarListing(player, car, price);
 
     const response: CarMarketplaceResponse = {
       success: true,

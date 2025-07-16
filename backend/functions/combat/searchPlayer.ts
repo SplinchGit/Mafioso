@@ -3,7 +3,7 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import { Player, SearchResult } from '../../../shared/types';
-import { GAME_CONFIG, CITIES } from '../../../shared/constants';
+import { GAME_CONFIG } from '../../../shared/constants';
 import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
@@ -157,7 +157,7 @@ export const handler = async (
 
     // Start search
     const searchEndTime = new Date(Date.now() + GAME_CONFIG.SEARCH_TIME * 1000).toISOString();
-    const updatedPlayer = await startSearch(player, targetPlayer, searchEndTime);
+    await startSearch(player, targetPlayer, searchEndTime);
 
     const response: SearchResult = {
       success: true,

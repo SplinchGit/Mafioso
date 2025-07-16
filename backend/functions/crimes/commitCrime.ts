@@ -161,8 +161,8 @@ export const handler = async (
     }
 
     // Commit the crime
-    const crimeResult = calculateCrimeResult(player, crime);
-    const updatedPlayer = await processCrimeResult(player, crime, crimeResult);
+    const crimeResult = calculateCrimeResult(crime);
+    const updatedPlayer = await processCrimeResult(player, crimeResult);
 
     // Set cooldown
     await setCrimeCooldown(player.worldId, crimeId, crime.cooldown);
@@ -292,7 +292,7 @@ async function checkCrimeCooldown(playerId: string, crimeId: number): Promise<{ 
   }
 }
 
-function calculateCrimeResult(player: Player, crime: typeof CRIMES[number]): CrimeResult {
+function calculateCrimeResult(crime: typeof CRIMES[number]): CrimeResult {
   // Use fixed success rate from crime definition
   const roll = Math.random() * 100;
   const isSuccess = roll < crime.baseSuccess;
@@ -338,7 +338,7 @@ function calculateCrimeResult(player: Player, crime: typeof CRIMES[number]): Cri
   }
 }
 
-async function processCrimeResult(player: Player, crime: typeof CRIMES[number], result: CrimeResult): Promise<Player> {
+async function processCrimeResult(player: Player, result: CrimeResult): Promise<Player> {
   const now = new Date().toISOString();
   
   const updates: Partial<Player> = {

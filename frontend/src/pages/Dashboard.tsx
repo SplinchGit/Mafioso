@@ -9,7 +9,7 @@ const Dashboard = () => {
   const currentCity = CITIES[player.city];
   const currentRank = RANKS[player.rank];
   const nextRank = RANKS[player.rank + 1];
-  const playerCar = player.carId !== undefined ? CARS[player.carId] : null;
+  const playerCar = player.activeCar ? CARS[player.cars.find(c => c.id === player.activeCar)?.carType || 0] : null;
 
   const rankProgress = nextRank 
     ? (player.respect / nextRank.requiredRespect) * 100 

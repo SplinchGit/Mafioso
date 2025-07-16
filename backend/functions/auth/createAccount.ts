@@ -199,6 +199,7 @@ async function createNewPlayer(walletAddress: string, username: string, worldId:
     kills: 0,
     deaths: 0,
     swissBank: GAME_CONFIG.STARTING_SWISS_BANK,
+    cars: [],
     stats: {
       crimesCommitted: 0,
       crimesSuccessful: 0,

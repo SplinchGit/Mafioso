@@ -1,4 +1,4 @@
-import type { CrimeOutcome, RankType, CityType, CrimeType, CarType, GunType, ProtectionType } from './constants';
+import type { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
 
 export interface Player {
   walletAddress: string; // Primary key - permanent identifier

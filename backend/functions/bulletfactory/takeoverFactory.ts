@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import { Player, BulletFactory, BulletFactoryResponse } from '../../../shared/types';
 import { CITIES } from '../../../shared/constants';
@@ -142,7 +142,7 @@ export const handler = async (
     }
 
     // Execute takeover
-    const { updatedPlayer, updatedFactory } = await executeTakeover(player, cityId, factory);
+    const { updatedPlayer } = await executeTakeover(player, cityId, factory);
 
     const cityName = CITIES[cityId]?.name || 'Unknown City';
     const response: BulletFactoryResponse = {

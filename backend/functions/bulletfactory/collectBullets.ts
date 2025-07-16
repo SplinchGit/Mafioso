@@ -137,7 +137,7 @@ export const handler = async (
     }
 
     // Execute collection
-    const { updatedPlayer, updatedFactory } = await executeCollection(player, factory, bulletsToCollect);
+    const { updatedPlayer } = await executeCollection(player, factory, bulletsToCollect);
 
     const cityName = CITIES[factory.cityId]?.name || 'Unknown City';
     const response: BulletFactoryResponse = {

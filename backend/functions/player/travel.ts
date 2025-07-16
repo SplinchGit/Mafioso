@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
-import { Player, PlayerCar } from '../../../shared/types';
+import { Player } from '../../../shared/types';
 import { CITIES, GAME_CONFIG, CARS } from '../../../shared/constants';
 import logger from '../../shared/logger';
 

@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, UpdateCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, CarListing, CarMarketplaceResponse, PlayerCar } from '../../../shared/types';
@@ -179,7 +179,7 @@ export const handler = async (
     }
 
     // Execute purchase transaction
-    const { updatedBuyer, updatedSeller } = await executePurchase(buyer, seller, listing);
+    const { updatedBuyer } = await executePurchase(buyer, seller, listing);
 
     const carName = CARS[listing.carType]?.name || 'Unknown Car';
     const response: CarMarketplaceResponse = {

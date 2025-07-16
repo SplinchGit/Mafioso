@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CARS } from '../../../shared/constants';
-import { PlayerCar } from '../types';
+import type { PlayerCar } from '../types';
 
 interface CarData {
   cars: PlayerCar[];

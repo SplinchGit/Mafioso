@@ -252,6 +252,7 @@ async function createNewPlayer(worldId: string, username: string): Promise<Playe
     kills: 0,
     deaths: 0,
     swissBank: GAME_CONFIG.STARTING_SWISS_BANK,
+    cars: [],
     stats: {
       crimesCommitted: 0,
       crimesSuccessful: 0,
