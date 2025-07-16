@@ -21,26 +21,41 @@ interface IRequestPayload {
   signal?: string;
 }
 
+// CORS headers configuration
+const corsHeaders = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  'Access-Control-Allow-Credentials': 'true'
+};
+
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   const requestId = event.requestContext.requestId;
+  
+  // Handle preflight OPTIONS request
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: ''
+    };
+  }
+
   await logger.info('MiniKit verification request initiated', {
     requestId,
     operation: 'verify-minikit',
-    hasBody: !!event.body
+    hasBody: !!event.body,
+    httpMethod: event.httpMethod
   });
 
   try {
     if (!event.body) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           success: false,
           error: 'Request body is required'
@@ -48,26 +63,42 @@ export const handler = async (
       };
     }
 
-    // Parse the request payload
+    // Parse the WRAPPED payload structure
     const { payload, action, signal } = JSON.parse(event.body) as IRequestPayload;
+
+    // Validate required fields
+    if (!payload || !action) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: false,
+          error: 'Missing required fields: payload and action'
+        })
+      };
+    }
 
     // Get secrets from Secrets Manager
     const jwtSecret = await getJWTSecret();
     
-    // Verify the proof with World ID cloud service
-    const app_id = process.env.WORLD_ID_APP_ID as `app_${string}` || 'app_bc75ea0f4623eb64e1814126df474de3' as `app_${string}`;
+    // Get app_id from environment
+    const app_id = process.env.WORLD_ID_APP_ID as `app_${string}`;
+    if (!app_id || !app_id.startsWith('app_')) {
+      throw new Error('Invalid or missing WORLD_ID_APP_ID environment variable');
+    }
     
     const verifyRes = await verifyCloudProof(payload, app_id, action, signal || '') as IVerifyResponse;
     
     if (!verifyRes.success) {
+      await logger.warn('World ID verification failed', {
+        requestId,
+        operation: 'verify-minikit',
+        error: 'World ID verification failed'
+      });
+      
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           success: false,
           error: 'World ID verification failed'
@@ -117,14 +148,16 @@ export const handler = async (
       { expiresIn: '30d' }
     );
 
+    await logger.info('MiniKit verification successful', {
+      requestId,
+      operation: 'verify-minikit',
+      worldId: player.worldId,
+      username: player.username
+    });
+
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS'
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         success: true,
         player,
@@ -142,12 +175,7 @@ export const handler = async (
     
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS'
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         success: false,
         error: 'Internal server error'

@@ -49,6 +49,7 @@ Resources:
         AllowMethods: "'GET,POST,OPTIONS'"
         AllowHeaders: "'Content-Type,Authorization'"
         AllowOrigin: "'*'"
+        AllowCredentials: false
 
   # Lambda Functions
   VerifyWorldIdFunction:
@@ -118,8 +119,14 @@ Resources:
           Type: Api
           Properties:
             RestApiId: !Ref MafiosoApi
-            Path: /verify
+            Path: /auth/verify-minikit
             Method: post
+        VerifyMiniKitOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /auth/verify-minikit
+            Method: options
 
   NonceFunction:
     Type: AWS::Serverless::Function

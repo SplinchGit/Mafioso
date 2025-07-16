@@ -45,7 +45,7 @@ export const useAuth = () => {
     setAuthError(null);
 
     try {
-      const response = await fetch('/api/verify', {
+      const response = await fetch('/api/auth/verify-minikit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
