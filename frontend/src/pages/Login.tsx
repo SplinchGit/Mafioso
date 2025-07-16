@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MiniKit } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
+import { useAuth } from '../hooks/useAuth';
 import ChooseUsername from '../components/ChooseUsername';
 import { triggerWalletAuth } from '../utils/minikit';
 
@@ -11,6 +12,7 @@ const Login = () => {
   const [showUsernameSelection, setShowUsernameSelection] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const { setPlayer, setError } = useGameStore();
+  const { authenticateWithWorldID } = useAuth();
 
   useEffect(() => {
     setIsMiniKitInstalled(MiniKit.isInstalled());
@@ -118,6 +120,24 @@ const Login = () => {
     }
   };
 
+  const handleWorldIDAuth = async () => {
+    setIsAuthenticating(true);
+    setAuthError(null);
+
+    try {
+      const success = await authenticateWithWorldID();
+      if (!success) {
+        setAuthError('World ID verification failed');
+      }
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'World ID authentication failed';
+      setAuthError(msg);
+      setError(msg);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
+
   const handleUsernameSelected = (player: any, token: string) => {
     localStorage.setItem('auth_token', token);
     setPlayer(player);
@@ -170,7 +190,7 @@ const Login = () => {
           {!isMiniKitInstalled && (
             <div className="bg-yellow-600/20 border border-yellow-600 rounded-lg p-3 mb-6">
               <p className="text-yellow-200 text-sm">
-                Please open this app in the World App to use wallet authentication
+                Please open this app in the World App to use authentication
               </p>
             </div>
           )}
@@ -181,25 +201,39 @@ const Login = () => {
               <span className="ml-3 text-mafia-gray-400">Authenticating...</span>
             </div>
           ) : (
-            <button
-              onClick={handleWalletAuth}
-              disabled={!isMiniKitInstalled}
-              className={`w-full text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200 ${
-                isMiniKitInstalled 
-                  ? 'btn-mafia' 
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              👛 Sign in with Wallet
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleWorldIDAuth}
+                disabled={!isMiniKitInstalled}
+                className={`w-full text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200 ${
+                  isMiniKitInstalled 
+                    ? 'btn-mafia' 
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                🌍 Sign in with World ID
+              </button>
+              
+              <button
+                onClick={handleWalletAuth}
+                disabled={!isMiniKitInstalled}
+                className={`w-full text-lg py-4 px-6 hover:scale-105 transform transition-all duration-200 ${
+                  isMiniKitInstalled 
+                    ? 'bg-mafia-gray-700 hover:bg-mafia-gray-600 text-white border border-mafia-gray-600' 
+                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                👛 Sign in with Wallet
+              </button>
+            </div>
           )}
 
           <div className="text-xs text-mafia-gray-500 mt-4">
-            <p>Wallet authentication provides:</p>
+            <p>Authentication options:</p>
             <ul className="mt-2 space-y-1">
-              <li>• Automatic account recovery</li>
+              <li>• <strong>World ID:</strong> Human verification & unique identity</li>
+              <li>• <strong>Wallet:</strong> Automatic recovery & secure identity</li>
               <li>• No passwords to remember</li>
-              <li>• Secure wallet-based identity</li>
             </ul>
           </div>
         </div>

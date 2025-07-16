@@ -192,18 +192,17 @@ export interface BulletFactoryResponse {
   message: string;
 }
 
-// World ID types
-export interface WorldIdConfig {
-  app_id: string;
+// MiniKit World ID types
+export interface MiniAppVerifyRequest {
+  payload: {
+    proof: string;
+    merkle_root: string;
+    nullifier_hash: string;
+    verification_level: 'orb' | 'device';
+    version: number;
+  };
   action: string;
   signal?: string;
-}
-
-export interface WorldIdSuccessResponse {
-  nullifier_hash: string;
-  merkle_root: string;
-  proof: string;
-  verification_level: 'orb' | 'device';
 }
 
 // Frontend-specific types

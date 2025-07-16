@@ -50,18 +50,50 @@ export interface ModalProps {
   children: React.ReactNode;
 }
 
-// World ID specific types for frontend
-export interface WorldIdConfig {
-  appId: string;
-  actionId: string;
+// MiniKit World ID verification types
+export interface VerifyCommandInput {
+  action: string;
   signal?: string;
+  verification_level?: VerificationLevel;
 }
 
-export interface WorldIdModalProps {
-  isOpen: boolean;
-  onSuccess: (result: any) => void;
-  onError: (error: Error) => void;
-  onClose: () => void;
+export enum VerificationLevel {
+  Orb = 'orb',
+  Device = 'device'
+}
+
+export interface ISuccessResult {
+  proof: string;
+  merkle_root: string;
+  nullifier_hash: string;
+  verification_level: VerificationLevel;
+  version: number;
+}
+
+export interface MiniAppVerifyActionSuccessPayload extends ISuccessResult {
+  status: 'success';
+}
+
+export interface MiniAppVerifyActionErrorPayload {
+  status: 'error';
+  error_code: string;
+  error_message: string;
+}
+
+// Window extension for World App environment
+declare global {
+  interface Window {
+    WorldApp?: {
+      world_app_version: number;
+      device_os: string;
+      safe_area_insets?: {
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      };
+    };
+  }
 }
 
 export interface GameCrime {
@@ -173,7 +205,7 @@ export const STORAGE_KEYS = {
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/auth/login',
-    VERIFY_WORLD_ID: '/api/auth/verify-worldid',
+    VERIFY_MINIAPP: '/api/auth/verify-miniapp',
     VALIDATE: '/api/auth/validate',
     LOGOUT: '/api/auth/logout'
   },

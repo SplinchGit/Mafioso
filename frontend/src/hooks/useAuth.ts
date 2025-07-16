@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
+import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
-import type { WorldIdSuccessResponse } from '../types';
 
 export const useAuth = () => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -39,21 +39,40 @@ export const useAuth = () => {
     checkExistingAuth();
   }, [player, setPlayer, setLoading]);
 
-  const authenticateWithWorldId = async (worldIdResult: WorldIdSuccessResponse): Promise<boolean> => {
+  const authenticateWithWorldID = async (): Promise<boolean> => {
+    // Check if running in World App environment
+    if (!MiniKit.isInstalled()) {
+      setAuthError('Please open this app in the World App');
+      return false;
+    }
+
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
-      const response = await fetch('/api/auth/verify-worldid', {
+      const verifyPayload: VerifyCommandInput = {
+        action: 'login', // Your action from Developer Portal
+        signal: undefined, // Optional additional data
+        verification_level: VerificationLevel.Orb, // Orb | Device
+      };
+
+      // World App opens a drawer for user confirmation
+      const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
+      
+      if (finalPayload.status === 'error') {
+        throw new Error(finalPayload.error_message || 'Verification failed');
+      }
+
+      // Send to backend for verification
+      const response = await fetch('/api/auth/verify-miniapp', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          nullifier_hash: worldIdResult.nullifier_hash,
-          merkle_root: worldIdResult.merkle_root,
-          proof: worldIdResult.proof,
-          verification_level: worldIdResult.verification_level
+          payload: finalPayload as ISuccessResult,
+          action: 'login',
+          signal: undefined
         })
       });
 
@@ -142,7 +161,7 @@ export const useAuth = () => {
     isAuthenticated: isAuthenticated(),
     
     // Methods
-    authenticateWithWorldId,
+    authenticateWithWorldID,
     signOut,
     refreshAuth,
     getAuthToken,
