@@ -207,7 +207,7 @@ export const STORAGE_KEYS = {
 export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/auth/login',
-    VERIFY_MINIAPP: '/api/auth/verify-miniapp',
+    VERIFY_MINIKIT: '/api/auth/verify-minikit',
     VALIDATE: '/api/auth/validate',
     LOGOUT: '/api/auth/logout'
   },

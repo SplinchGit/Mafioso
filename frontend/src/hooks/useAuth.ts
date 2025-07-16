@@ -40,53 +40,22 @@ export const useAuth = () => {
     checkExistingAuth();
   }, [player, setPlayer, setLoading]);
 
-  const authenticateWithWorldID = async (): Promise<boolean> => {
-    // Check if running in World App environment
-    if (!MiniKit.isInstalled()) {
-      setAuthError('Please open this app in the World App');
-      return false;
-    }
-
+  const authenticateWithMiniKit = async (payload: ISuccessResult): Promise<boolean> => {
     setIsAuthenticating(true);
     setAuthError(null);
 
     try {
-      const verifyPayload: VerifyCommandInput = {
-        action: 'login', // Your action from Developer Portal
-        signal: undefined, // Optional additional data
-        verification_level: VerificationLevel.Orb, // Orb | Device
-      };
-
-      // World App opens a drawer for user confirmation
-      const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
-      
-      if (finalPayload.status === 'error') {
-        console.error('Verification failed:', finalPayload);
-        throw new Error('Verification failed');
-      }
-
-      // Send to backend for verification
       const response = await fetch('/api/auth/verify-minikit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          payload: finalPayload as ISuccessResult,
-          action: 'login',
-          signal: undefined
-        })
+        body: JSON.stringify(payload) // Send the entire payload object
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        console.error('Authentication failed:', {
-          status: response.status,
-          statusText: response.statusText,
-          error: data.error,
-          details: data.details
-        });
         throw new Error(data.error || 'Authentication failed');
       }
 
@@ -169,7 +138,7 @@ export const useAuth = () => {
     isAuthenticated: isAuthenticated(),
     
     // Methods
-    authenticateWithWorldID,
+    authenticateWithMiniKit, // Changed from authenticateWithWorldId
     signOut,
     refreshAuth,
     getAuthToken,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MiniKit } from '@worldcoin/minikit-js';
+import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 import { useAuth } from '../hooks/useAuth';
 
@@ -8,7 +8,7 @@ const Login = () => {
   const [authError, setAuthError] = useState<string | null>(null);
   const [isMiniKitInstalled, setIsMiniKitInstalled] = useState(false);
   const { setError } = useGameStore();
-  const { authenticateWithWorldID } = useAuth();
+  const { authenticateWithMiniKit } = useAuth();
 
   useEffect(() => {
     setIsMiniKitInstalled(MiniKit.isInstalled());
@@ -16,13 +16,30 @@ const Login = () => {
 
 
   const handleWorldIDAuth = async () => {
+    if (!MiniKit.isInstalled()) {
+      setAuthError('Please open this app in the World App');
+      return;
+    }
+
     setIsAuthenticating(true);
     setAuthError(null);
 
+    const verifyPayload: VerifyCommandInput = {
+      action: 'login', // This must match the action in your backend
+      verification_level: VerificationLevel.Orb, // or VerificationLevel.Device
+    };
+
     try {
-      const success = await authenticateWithWorldID();
-      if (!success) {
-        setAuthError('World ID verification failed');
+      const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
+      
+      if (finalPayload.status === 'success') {
+        // Pass the successful payload to authenticateWithMiniKit
+        const success = await authenticateWithMiniKit(finalPayload as ISuccessResult);
+        if (!success) {
+          setAuthError('Authentication failed');
+        }
+      } else {
+        setAuthError('Verification failed');
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'World ID authentication failed';
