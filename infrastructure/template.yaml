@@ -325,6 +325,285 @@ Resources:
             Path: /crimes/commit
             Method: post
 
+  # Player Functions
+  BuyGunFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/player/
+      Handler: buyGun.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        BuyGun:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /player/buy-gun
+            Method: post
+
+  BuyProtectionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/player/
+      Handler: buyProtection.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        BuyProtection:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /player/buy-protection
+            Method: post
+
+  SwissBankFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/player/
+      Handler: swissBank.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        SwissBank:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /player/swiss-bank
+            Method: post
+
+  TravelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/player/
+      Handler: travel.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          PLAYERS_TABLE: !Ref PlayersTable
+      Events:
+        Travel:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /player/travel
+            Method: post
+
+  # Combat Functions
+  SearchPlayerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/combat/
+      Handler: searchPlayer.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        SearchPlayer:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /combat/search-player
+            Method: post
+
+  ShootPlayerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/combat/
+      Handler: shootPlayer.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        ShootPlayer:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /combat/shoot-player
+            Method: post
+
+  CancelSearchFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/combat/
+      Handler: cancelSearch.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+        - Statement:
+            - Effect: Allow
+              Action:
+                - secretsmanager:GetSecretValue
+              Resource:
+                - !Ref JWTSecretArn
+            - Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+                - logs:DescribeLogGroups
+                - logs:DescribeLogStreams
+              Resource: 
+                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
+      Events:
+        CancelSearch:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /combat/cancel-search
+            Method: post
+
+  # Garage Functions
+  GetCarsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/garage/
+      Handler: getCars.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          PLAYERS_TABLE: !Ref PlayersTable
+      Events:
+        GetCars:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /garage/cars
+            Method: get
+
+  RepairCarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/garage/
+      Handler: repairCar.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          PLAYERS_TABLE: !Ref PlayersTable
+      Events:
+        RepairCar:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /garage/repair
+            Method: post
+
+  MeltCarFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/garage/
+      Handler: meltCar.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - CloudWatchLogsFullAccess
+      Environment:
+        Variables:
+          JWT_SECRET: !Ref JwtSecret
+          PLAYERS_TABLE: !Ref PlayersTable
+      Events:
+        MeltCar:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /garage/melt
+            Method: post
+
   # DynamoDB Tables
   PlayersTable:
     Type: AWS::DynamoDB::Table

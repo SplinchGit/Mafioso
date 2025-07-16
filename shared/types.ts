@@ -1,4 +1,4 @@
-import type { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
+import type { CrimeOutcome, RankType, CityType, CrimeType, CarType, GunType, ProtectionType } from './constants';
 
 export interface Player {
   walletAddress: string; // Primary key - permanent identifier
@@ -8,12 +8,22 @@ export interface Player {
   respect: number;
   rank: number;
   city: number;
-  carId?: number;
+  cars: PlayerCar[];     // Array of owned cars
+  activeCar?: string;    // Unique ID of currently selected car
   lastActive: string;
   createdAt: string;
   jailUntil?: string;
   hospitalUntil?: string;
   stats: PlayerStats;
+  gunId?: number;        // 0-8, which gun they own (null if none)
+  protectionId?: number; // 0-8, which protection they own (null if none)
+  bullets: number;       // how many bullets they have
+  kills: number;         // total kills
+  deaths: number;        // total deaths - when shot, account resets
+  swissBank: number;     // money stored in swiss bank - safe from death
+  searchingFor?: SearchData; // current target search information
+  lastMeltTime?: string; // timestamp of last car melt
+  bulletFactoryId?: number; // city id 0-4 if they own a factory (null if none)
 }
 
 export interface PlayerStats {
@@ -25,6 +35,40 @@ export interface PlayerStats {
   totalMoneyEarned: number;
   totalRespectEarned: number;
   rankUps: number;
+}
+
+export interface SearchData {
+  targetId: string;
+  searchStartTime: string;
+  searchEndTime: string;
+  targetUsername?: string;
+  targetCity?: number;
+  isComplete?: boolean;
+}
+
+export interface PlayerCar {
+  id: string;           // unique identifier
+  carType: number;      // 0-10 (which car model)
+  damage: number;       // 0-100 (car's current damage)
+  source: 'bought' | 'gta' | 'killed_player'; // how car was obtained
+}
+
+export interface CarListing {
+  id: string;           // unique identifier
+  sellerId: string;     // player worldId
+  carId: string;        // unique car id from seller's inventory
+  carType: number;      // 0-10 (which car model)
+  damage: number;       // 0-100 (car's current damage)
+  price: number;        // listing price in dollars
+  listedAt: string;     // timestamp
+  active: boolean;      // whether listing is still active
+}
+
+export interface BulletFactory {
+  cityId: number;       // 0-4 (one per city)
+  ownerId?: string;     // player worldId (null if unowned)
+  lastCollectionTime: string; // timestamp for owner
+  storedBullets: number; // current bullets in city store
 }
 
 export interface CrimeResult {
@@ -83,6 +127,69 @@ export interface CrimeResponse {
   result: CrimeResult;
   player: Player;
   cooldownUntil: string;
+}
+
+export interface ShootResult {
+  success: boolean;
+  bulletsCost: number;
+  target?: string;
+  message: string;
+  carsGained?: number;
+}
+
+export interface SearchResult {
+  success: boolean;
+  targetFound?: {
+    username: string;
+    city: number;
+  };
+  searchEndTime?: string;
+  message: string;
+}
+
+export interface StoreItem {
+  id: number;
+  name: string;
+  price: number;
+  type: 'gun' | 'protection';
+  divisor?: number;     // For guns - reduces bullets needed
+  multiplier?: number;  // For protection - increases bullets needed to kill
+  description?: string;
+}
+
+export interface StorePurchaseResponse {
+  success: boolean;
+  item?: StoreItem;
+  player: Player;
+  message: string;
+}
+
+export interface SwissBankResponse {
+  success: boolean;
+  player: Player;
+  message: string;
+}
+
+export interface CarMarketplaceResponse {
+  success: boolean;
+  listings?: CarListing[];
+  player?: Player;
+  message: string;
+}
+
+export interface CarMeltResponse {
+  success: boolean;
+  bulletsGained: number;
+  player: Player;
+  message: string;
+}
+
+export interface BulletFactoryResponse {
+  success: boolean;
+  factories?: BulletFactory[];
+  player?: Player;
+  bulletsCollected?: number;
+  message: string;
 }
 
 // World ID types

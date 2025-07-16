@@ -248,6 +248,10 @@ async function createNewPlayer(worldId: string, username: string): Promise<Playe
     city: 0, // Start in London
     lastActive: now,
     createdAt: now,
+    bullets: GAME_CONFIG.STARTING_BULLETS,
+    kills: 0,
+    deaths: 0,
+    swissBank: GAME_CONFIG.STARTING_SWISS_BANK,
     stats: {
       crimesCommitted: 0,
       crimesSuccessful: 0,

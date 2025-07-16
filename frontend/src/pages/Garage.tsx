@@ -1,258 +1,357 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { CARS } from '../../../shared/constants';
+import { PlayerCar } from '../types';
+
+interface CarData {
+  cars: PlayerCar[];
+  groupedCars: { [key: number]: PlayerCar[] };
+  activeCar?: string;
+  meltCooldownRemaining: number;
+  totalCars: number;
+}
 
 const Garage = () => {
-  const { player, buyCar, isLoading } = useGameStore();
-  const [selectedCar, setSelectedCar] = useState<number | null>(null);
+  const { player, isLoading } = useGameStore();
+  const [carData, setCarData] = useState<CarData | null>(null);
+  const [selectedCarToMelt, setSelectedCarToMelt] = useState<string | null>(null);
+  const [selectedCarToRepair, setSelectedCarToRepair] = useState<string | null>(null);
+  const [selectedCarToActivate, setSelectedCarToActivate] = useState<string | null>(null);
+  const [meltCooldown, setMeltCooldown] = useState(0);
 
-  if (!player) return null;
+  useEffect(() => {
+    fetchCarData();
+  }, [player]);
 
-  const playerCar = player.carId !== undefined ? CARS[player.carId] : null;
-  const availableCars = CARS.filter((_, index) => index !== player.carId);
+  useEffect(() => {
+    if (meltCooldown > 0) {
+      const timer = setInterval(() => {
+        setMeltCooldown(prev => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [meltCooldown]);
 
-  const handleBuyCar = async () => {
-    if (selectedCar === null) return;
-    
-    const success = await buyCar(selectedCar);
-    if (success) {
-      setSelectedCar(null);
+  const fetchCarData = async () => {
+    if (!player) return;
+
+    try {
+      const response = await fetch('/api/garage/cars', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setCarData(result.data);
+        setMeltCooldown(result.data.meltCooldownRemaining || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch car data:', error);
     }
   };
 
-  const canAffordCar = (price: number) => {
-    return player.money >= price;
+  const handleMeltCar = async (carId: string) => {
+    try {
+      const response = await fetch('/api/garage/melt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ carId })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(result.message);
+        fetchCarData();
+        // Update player data in store
+        useGameStore.getState().updatePlayer(result.player);
+      } else {
+        alert(result.error || 'Failed to melt car');
+      }
+    } catch (error) {
+      console.error('Failed to melt car:', error);
+      alert('Failed to melt car');
+    }
   };
 
-  const getCarRarity = (carId: number) => {
-    if (carId <= 2) return { label: 'Common', color: 'text-mafia-gray-400' };
-    if (carId <= 5) return { label: 'Uncommon', color: 'text-white' };
-    if (carId <= 7) return { label: 'Rare', color: 'text-mafia-gold' };
-    if (carId <= 9) return { label: 'Epic', color: 'text-mafia-red' };
-    return { label: 'Legendary', color: 'text-purple-400' };
+  const handleRepairCar = async () => {
+    if (!selectedCarToRepair) return;
+
+    try {
+      const response = await fetch('/api/garage/repair', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ carId: selectedCarToRepair })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert(result.message);
+        setSelectedCarToRepair(null);
+        fetchCarData();
+        // Update player data in store
+        useGameStore.getState().updatePlayer(result.player);
+      } else {
+        alert(result.error || 'Failed to repair car');
+      }
+    } catch (error) {
+      console.error('Failed to repair car:', error);
+      alert('Failed to repair car');
+    }
   };
+
+  const handleActivateCar = async () => {
+    if (!selectedCarToActivate) return;
+
+    try {
+      const response = await fetch('/api/garage/activate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+        },
+        body: JSON.stringify({ carId: selectedCarToActivate })
+      });
+
+      const result = await response.json();
+      
+      if (response.ok) {
+        alert('Car activated successfully!');
+        setSelectedCarToActivate(null);
+        fetchCarData();
+        // Update player data in store
+        useGameStore.getState().updatePlayer(result.player);
+      } else {
+        alert(result.error || 'Failed to activate car');
+      }
+    } catch (error) {
+      console.error('Failed to activate car:', error);
+      alert('Failed to activate car');
+    }
+  };
+
+  const getCarRarity = (carType: number) => {
+    if (carType <= 2) return { label: 'Common', color: 'text-gray-400' };
+    if (carType <= 6) return { label: 'Uncommon', color: 'text-white' };
+    if (carType <= 9) return { label: 'Rare', color: 'text-yellow-400' };
+    return { label: 'Legendary', color: 'text-orange-400' };
+  };
+
+  const calculateRepairChance = (car: PlayerCar) => {
+    const isRareCar = (car.carType >= 7 && car.carType <= 9) || car.carType === 10;
+    
+    if (isRareCar) {
+      return Math.max(0, 50 - (car.damage * 0.5));
+    } else {
+      return Math.max(0, 100 - car.damage);
+    }
+  };
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`;
+    } else {
+      return `${secs}s`;
+    }
+  };
+
+  if (!player || !carData) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white p-6">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-4xl font-bold mb-8">Garage</h1>
+          <div className="text-center">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-mafia-red mb-2">🚗 Garage</h1>
-        <p className="text-mafia-gray-400 text-lg">
-          Upgrade your ride for faster getaways
-        </p>
-      </div>
-
-      {/* Current Vehicle */}
-      <div className="card-mafia mb-8">
-        <h2 className="text-2xl font-bold text-white mb-4">Current Vehicle</h2>
+    <div className="min-h-screen bg-gray-900 text-white p-6">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8">Garage</h1>
         
-        {playerCar ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold text-mafia-gold mb-2">{playerCar.name}</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-mafia-gray-400">Speed: </span>
-                  <span className="text-white font-semibold">{playerCar.speed}/100</span>
-                </div>
-                <div>
-                  <span className="text-mafia-gray-400">Acceleration: </span>
-                  <span className="text-white font-semibold">{playerCar.accel}/100</span>
-                </div>
-              </div>
-              <div className="mt-2">
-                <span className={`text-sm font-semibold ${getCarRarity(player.carId!).color}`}>
-                  {getCarRarity(player.carId!).label}
-                </span>
-              </div>
-            </div>
-            
-            <div className="text-6xl">🚗</div>
+        {/* Garage Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">Total Cars</h2>
+            <p className="text-3xl font-bold text-blue-400">{carData.totalCars}</p>
           </div>
-        ) : (
-          <div className="text-center py-8">
-            <div className="text-6xl mb-4">🚶‍♂️</div>
-            <h3 className="text-xl font-bold text-mafia-gray-400 mb-2">On Foot</h3>
-            <p className="text-mafia-gray-500">
-              You don't own a vehicle yet. Buy one to improve your escape chances!
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">Active Car</h2>
+            <p className="text-lg">
+              {carData.activeCar ? 
+                CARS[carData.cars.find(c => c.id === carData.activeCar)?.carType || 0]?.name || 'Unknown' 
+                : 'None'
+              }
             </p>
           </div>
-        )}
-      </div>
-
-      {/* Available Cars */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-white mb-6">Available Vehicles</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {availableCars.map((car) => {
-            const canAfford = canAffordCar(car.price);
-            const rarity = getCarRarity(car.id);
-            
-            return (
-              <div
-                key={car.id}
-                className={`card-mafia cursor-pointer transition-all duration-300 ${
-                  selectedCar === car.id
-                    ? 'ring-2 ring-mafia-red scale-105'
-                    : 'hover:scale-105 hover:shadow-xl'
-                } ${
-                  !canAfford ? 'opacity-50' : ''
-                }`}
-                onClick={() => canAfford && setSelectedCar(car.id)}
-              >
-                <div className="text-center mb-4">
-                  <div className="text-4xl mb-2">🚗</div>
-                  <h3 className="text-lg font-bold text-white mb-1">{car.name}</h3>
-                  <span className={`text-sm font-semibold ${rarity.color}`}>
-                    {rarity.label}
-                  </span>
-                </div>
-
-                <div className="space-y-3 mb-4">
-                  {/* Speed Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-mafia-gray-400">Speed</span>
-                      <span className="text-white font-semibold">{car.speed}/100</span>
-                    </div>
-                    <div className="w-full bg-mafia-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-mafia-red h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${car.speed}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Acceleration Bar */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-mafia-gray-400">Acceleration</span>
-                      <span className="text-white font-semibold">{car.accel}/100</span>
-                    </div>
-                    <div className="w-full bg-mafia-gray-700 rounded-full h-2">
-                      <div 
-                        className="bg-mafia-gold h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${car.accel}%` }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* Price */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-mafia-gray-400">Price:</span>
-                    <span className={`font-semibold ${canAfford ? 'text-money' : 'text-blood'}`}>
-                      ${car.price.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                {!canAfford && (
-                  <div className="bg-blood/20 border border-blood rounded p-2 mb-3">
-                    <p className="text-blood text-xs text-center">Not enough money</p>
-                  </div>
-                )}
-
-                {selectedCar === car.id && (
-                  <div className="bg-mafia-red/20 border border-mafia-red rounded p-2 mb-3">
-                    <p className="text-mafia-red text-xs text-center">Selected for purchase</p>
-                  </div>
-                )}
-
-                <div className="text-center">
-                  <div className="text-xs text-mafia-gray-400">
-                    Better vehicles improve crime success rates
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Purchase Confirmation */}
-      {selectedCar !== null && (
-        <div className="card-mafia">
-          <div className="text-center">
-            <h3 className="text-xl font-bold text-white mb-4">Confirm Purchase</h3>
-            
-            <div className="bg-mafia-gray-700 rounded-lg p-6 mb-6">
-              <div className="text-4xl mb-3">🚗</div>
-              <h4 className="text-xl font-bold text-mafia-gold mb-2">
-                {CARS[selectedCar].name}
-              </h4>
-              <div className={`text-sm font-semibold mb-4 ${getCarRarity(selectedCar).color}`}>
-                {getCarRarity(selectedCar).label}
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <div className="text-white font-semibold">{CARS[selectedCar].speed}/100</div>
-                  <div className="text-xs text-mafia-gray-400">Speed</div>
-                </div>
-                <div>
-                  <div className="text-white font-semibold">{CARS[selectedCar].accel}/100</div>
-                  <div className="text-xs text-mafia-gray-400">Acceleration</div>
-                </div>
-              </div>
-              
-              <div className="text-money font-bold text-2xl">
-                ${CARS[selectedCar].price.toLocaleString()}
-              </div>
-            </div>
-
-            {playerCar && (
-              <div className="bg-mafia-gray-700 rounded-lg p-3 mb-6">
-                <p className="text-mafia-gray-400 text-sm">
-                  Your current {playerCar.name} will be sold for ${Math.round(playerCar.price * 0.5).toLocaleString()}
-                </p>
-              </div>
-            )}
-
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setSelectedCar(null)}
-                className="btn-secondary flex-1"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              
-              <button
-                onClick={handleBuyCar}
-                className="btn-mafia flex-1"
-                disabled={isLoading}
-              >
-                {isLoading ? 'Purchasing...' : 'Buy Vehicle'}
-              </button>
-            </div>
+          <div className="bg-gray-800 p-6 rounded-lg">
+            <h2 className="text-xl font-semibold mb-2">Melt Cooldown</h2>
+            <p className="text-lg">
+              {meltCooldown > 0 ? formatTime(meltCooldown) : 'Ready'}
+            </p>
           </div>
         </div>
-      )}
 
-      {/* Vehicle Tips */}
-      <div className="mt-8">
-        <div className="card-mafia">
-          <h3 className="text-lg font-bold text-mafia-red mb-4">🚗 Vehicle Tips</h3>
+        {/* Car List */}
+        <div className="bg-gray-800 rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-6">Your Cars</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-2">
-              <p className="text-white">
-                🏃‍♂️ <strong>Speed</strong> affects your ability to escape after crimes
-              </p>
-              <p className="text-white">
-                ⚡ <strong>Acceleration</strong> helps you get away quickly
-              </p>
+          {carData.cars.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400 text-lg">You don't own any cars yet.</p>
+              <p className="text-gray-400 mt-2">Visit the marketplace to buy one or try Grand Theft Auto!</p>
             </div>
-            
-            <div className="space-y-2">
-              <p className="text-white">
-                💰 <strong>Selling</strong> your current car gives you 50% of its value
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {carData.cars.map((car) => {
+                const carInfo = CARS[car.carType];
+                const rarity = getCarRarity(car.carType);
+                const repairChance = calculateRepairChance(car);
+                const isActive = car.id === carData.activeCar;
+                
+                return (
+                  <div key={car.id} className={`bg-gray-700 rounded-lg p-4 border-2 ${isActive ? 'border-green-400' : 'border-gray-600'}`}>
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-xl font-semibold">{carInfo?.name || 'Unknown Car'}</h3>
+                      {isActive && (
+                        <span className="bg-green-500 text-white px-2 py-1 rounded text-sm">Active</span>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span>Rarity:</span>
+                        <span className={rarity.color}>{rarity.label}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Damage:</span>
+                        <span className={car.damage > 50 ? 'text-red-400' : car.damage > 25 ? 'text-yellow-400' : 'text-green-400'}>
+                          {car.damage}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Speed:</span>
+                        <span>{carInfo?.speed || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Source:</span>
+                        <span className="capitalize">{car.source.replace('_', ' ')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Melt Value:</span>
+                        <span>{Math.floor((carInfo?.baseBullets || 0) * ((100 - car.damage) / 100))} bullets</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {!isActive && (
+                        <button
+                          onClick={() => setSelectedCarToActivate(car.id)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                        >
+                          Set as Active
+                        </button>
+                      )}
+                      
+                      {car.damage > 0 && (
+                        <button
+                          onClick={() => setSelectedCarToRepair(car.id)}
+                          className="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded"
+                        >
+                          Repair ({repairChance.toFixed(0)}% chance)
+                        </button>
+                      )}
+                      
+                      {!isActive && (
+                        <button
+                          onClick={() => handleMeltCar(car.id)}
+                          disabled={meltCooldown > 0}
+                          className={`w-full py-2 px-4 rounded ${
+                            meltCooldown === 0
+                              ? 'bg-red-600 hover:bg-red-700 text-white'
+                              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                          }`}
+                        >
+                          Melt for Bullets
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+
+        {selectedCarToRepair && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg max-w-md">
+              <h3 className="text-xl font-bold mb-4">Confirm Car Repair</h3>
+              <p className="mb-4">
+                Repair chance: {calculateRepairChance(carData.cars.find(c => c.id === selectedCarToRepair)!).toFixed(0)}%
               </p>
-              <p className="text-white">
-                🌟 <strong>Rarer cars</strong> provide better performance bonuses
-              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleRepairCar}
+                  disabled={isLoading}
+                  className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-2 px-4 rounded"
+                >
+                  {isLoading ? 'Repairing...' : 'Attempt Repair'}
+                </button>
+                <button
+                  onClick={() => setSelectedCarToRepair(null)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {selectedCarToActivate && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-gray-800 p-6 rounded-lg max-w-md">
+              <h3 className="text-xl font-bold mb-4">Activate Car</h3>
+              <p className="mb-4">
+                Set this car as your active vehicle for travel?
+              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleActivateCar}
+                  disabled={isLoading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+                >
+                  {isLoading ? 'Activating...' : 'Activate'}
+                </button>
+                <button
+                  onClick={() => setSelectedCarToActivate(null)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

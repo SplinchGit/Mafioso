@@ -144,6 +144,13 @@ const Travel = () => {
                   <div className="text-mafia-gray-400">Travel Time</div>
                 </div>
               </div>
+              
+              {/* Car damage warning */}
+              <div className="mt-4 bg-amber-500/20 border border-amber-500 rounded p-3">
+                <p className="text-amber-500 text-sm">
+                  ⚠️ Your car will take {GAME_CONFIG.CAR_DAMAGE_PER_TRAVEL}% damage from this journey
+                </p>
+              </div>
             </div>
 
             <div className="flex space-x-4">
@@ -187,7 +194,7 @@ const Travel = () => {
                 💰 <strong>Save money</strong> for travel costs and emergencies
               </p>
               <p className="text-white">
-                🌍 <strong>Explore all cities</strong> to maximize your criminal empire
+                🚗 <strong>Cars take damage</strong> - Each trip damages your car by {GAME_CONFIG.CAR_DAMAGE_PER_TRAVEL}%
               </p>
             </div>
           </div>

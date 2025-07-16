@@ -155,17 +155,41 @@ export const CRIMES = [
 ] as const;
 
 export const CARS = [
-  { id: 0, name: "Fiat 500", price: 15000, speed: 45, accel: 30 },
-  { id: 1, name: "Ford Focus", price: 25000, speed: 55, accel: 40 },
-  { id: 2, name: "Honda Civic", price: 35000, speed: 65, accel: 50 },
-  { id: 3, name: "BMW 3 Series", price: 55000, speed: 75, accel: 65 },
-  { id: 4, name: "Audi A4", price: 65000, speed: 80, accel: 70 },
-  { id: 5, name: "Mercedes C-Class", price: 75000, speed: 85, accel: 75 },
-  { id: 6, name: "Porsche 911", price: 150000, speed: 95, accel: 90 },
-  { id: 7, name: "Ferrari 458", price: 300000, speed: 98, accel: 95 },
-  { id: 8, name: "Lamborghini Huracán", price: 400000, speed: 99, accel: 97 },
-  { id: 9, name: "Bugatti Veyron", price: 2000000, speed: 100, accel: 98 },
-  { id: 10, name: "Ferrari LaFerrari", price: 5000000, speed: 100, accel: 100 }
+  { id: 0, name: "Fiat 500", price: 15000, speed: 45, accel: 30, baseBullets: 1 },
+  { id: 1, name: "Ford Focus", price: 25000, speed: 55, accel: 40, baseBullets: 5 },
+  { id: 2, name: "Honda Civic", price: 35000, speed: 65, accel: 50, baseBullets: 10 },
+  { id: 3, name: "BMW 3 Series", price: 55000, speed: 75, accel: 65, baseBullets: 25 },
+  { id: 4, name: "Audi A4", price: 65000, speed: 80, accel: 70, baseBullets: 35 },
+  { id: 5, name: "Mercedes C-Class", price: 75000, speed: 85, accel: 75, baseBullets: 50 },
+  { id: 6, name: "BMW X5", price: 150000, speed: 95, accel: 90, baseBullets: 80 },
+  { id: 7, name: "Nissan R35", price: 300000, speed: 98, accel: 95, baseBullets: 120 },
+  { id: 8, name: "Lamborghini Huracán", price: 400000, speed: 99, accel: 97, baseBullets: 160 },
+  { id: 9, name: "Bugatti Veyron", price: 2000000, speed: 100, accel: 98, baseBullets: 200 },
+  { id: 10, name: "Ferrari LaFerrari", price: 5000000, speed: 100, accel: 100, baseBullets: 220 }
+] as const;
+
+export const GUNS = [
+  { id: 0, name: "Röhm RG-14", price: 500, divisor: 1 },
+  { id: 1, name: "MP-25", price: 2500, divisor: 1.5 },
+  { id: 2, name: "MAC-10", price: 10000, divisor: 2 },
+  { id: 3, name: "Beretta 92", price: 25000, divisor: 2.5 },
+  { id: 4, name: "Colt 1911", price: 100000, divisor: 3 },
+  { id: 5, name: "Colt Model 1921A", price: 250000, divisor: 3.5 },
+  { id: 6, name: "AK-47", price: 750000, divisor: 4 },
+  { id: 7, name: ".44 Magnum", price: 2000000, divisor: 4.5 },
+  { id: 8, name: "Barrett .50 Cal", price: 5000000, divisor: 5 }
+] as const;
+
+export const PROTECTION = [
+  { id: 0, name: "Potato Sack", price: 1000, multiplier: 1 },
+  { id: 1, name: "Surplus Vest Model-1", price: 5000, multiplier: 1.5 },
+  { id: 2, name: "Standard Issue V-20", price: 20000, multiplier: 2 },
+  { id: 3, name: "Urban Guard MK-III", price: 50000, multiplier: 2.5 },
+  { id: 4, name: "Tactical Defence T-45", price: 150000, multiplier: 3 },
+  { id: 5, name: "Military Grade M-70", price: 500000, multiplier: 3.5 },
+  { id: 6, name: "Advanced Protection AP-90", price: 1250000, multiplier: 4 },
+  { id: 7, name: "Elite Guard EG-120", price: 3000000, multiplier: 4.5 },
+  { id: 8, name: "Fortress F-500", price: 7500000, multiplier: 5 }
 ] as const;
 
 export const GAME_CONFIG = {
@@ -174,6 +198,30 @@ export const GAME_CONFIG = {
   JAIL_TIME_BASE: 300, // 5 minutes base jail time
   TRAVEL_COST_BASE: 1000,
   TRAVEL_TIME: 60, // 1 minute
+  STARTING_BULLETS: 0,
+  STARTING_SWISS_BANK: 0,
+  BULLETS_ON_RANKUP: 1337,
+  SEARCH_TIME: 10800, // 3 hours in seconds
+  SEARCH_RESULT_VALID_TIME: 3600, // 1 hour in seconds
+  MAX_CONCURRENT_SEARCHES: 250,
+  CAR_MELT_COOLDOWN: 300, // 5 minutes in seconds
+  CAR_DAMAGE_PER_TRAVEL: 5, // 5% damage per travel
+  BULLET_FACTORY_PRODUCTION_PER_DAY: 3600,
+  BULLET_FACTORY_OWNER_PERCENTAGE: 60, // 60% to owner, 40% to city store
+} as const;
+
+export const RANK_DIFFERENCE_MULTIPLIERS = {
+  0: 5,     // Same rank
+  1: 4,     // 1 rank difference
+  2: 3.5,   // 2 rank difference
+  3: 3,     // 3 rank difference
+  4: 2.5,   // 4 rank difference
+  5: 2,     // 5 rank difference
+  6: 1.75,  // 6 rank difference
+  7: 1.5,   // 7 rank difference
+  8: 1.25,  // 8 rank difference
+  9: 1.1,   // 9 rank difference
+  10: 1,    // 10+ rank difference
 } as const;
 
 export const CRIME_OUTCOMES = {
@@ -187,3 +235,5 @@ export type RankType = typeof RANKS[number];
 export type CityType = typeof CITIES[number];
 export type CrimeType = typeof CRIMES[number];
 export type CarType = typeof CARS[number];
+export type GunType = typeof GUNS[number];
+export type ProtectionType = typeof PROTECTION[number];

@@ -77,9 +77,9 @@ export const usePlayer = () => {
   };
 
   const getCurrentCar = () => {
-    if (!player || player.carId === undefined) return null;
-    // This would import CARS from constants
-    return player.carId;
+    if (!player || !player.activeCar || player.cars.length === 0) return null;
+    // Find the active car in the cars array
+    return player.cars.find(car => car.id === player.activeCar) || null;
   };
 
   return {

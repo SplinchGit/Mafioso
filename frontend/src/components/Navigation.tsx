@@ -18,6 +18,8 @@ const Navigation = () => {
     { path: '/crimes', label: 'Crimes', icon: '💰' },
     { path: '/travel', label: 'Travel', icon: '✈️' },
     { path: '/garage', label: 'Garage', icon: '🚗' },
+    { path: '/store', label: 'Store', icon: '🏪' },
+    { path: '/shoot', label: 'Shoot', icon: '🎯' },
   ];
 
   const isActivePath = (path: string) => location.pathname === path;
@@ -79,9 +81,9 @@ const Navigation = () => {
 
             <div className="text-right">
               <div className="text-white font-semibold">
-                {player.nerve}/100
+                {player.bullets}
               </div>
-              <div className="text-xs text-mafia-gray-400">nerve</div>
+              <div className="text-xs text-mafia-gray-400">bullets</div>
             </div>
 
             <button
@@ -135,7 +137,7 @@ const Navigation = () => {
                   ${player.money.toLocaleString()}
                 </div>
                 <div className="text-sm text-mafia-gray-400">
-                  {player.respect.toLocaleString()} respect • {player.nerve}/100 nerve
+                  {player.respect.toLocaleString()} respect • {player.bullets} bullets
                 </div>
               </div>
               

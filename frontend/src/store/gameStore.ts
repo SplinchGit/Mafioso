@@ -15,6 +15,12 @@ interface GameStore extends GameState {
   commitCrime: (crimeId: number) => Promise<CrimeResult | null>;
   travel: (cityId: number) => Promise<boolean>;
   buyCar: (carId: number) => Promise<boolean>;
+  buyGun: (gunId: number) => Promise<boolean>;
+  buyProtection: (protectionId: number) => Promise<boolean>;
+  swissBank: (action: 'deposit' | 'withdraw', amount: number) => Promise<boolean>;
+  searchPlayer: (targetUsername: string) => Promise<boolean>;
+  shootPlayer: () => Promise<boolean>;
+  cancelSearch: () => Promise<boolean>;
   
   // Computed values
   getCurrentRank: () => string;
@@ -154,6 +160,227 @@ export const useGameStore = create<GameStore>()(
 
             if (!response.ok) {
               throw new Error(data.error || 'Failed to buy car');
+            }
+
+            set((state) => ({
+              player: data.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        buyGun: async (gunId: number): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/player/buy-gun', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              },
+              body: JSON.stringify({ gunId })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to buy gun');
+            }
+
+            set((state) => ({
+              player: data.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        buyProtection: async (protectionId: number): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/player/buy-protection', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              },
+              body: JSON.stringify({ protectionId })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to buy protection');
+            }
+
+            set((state) => ({
+              player: data.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        swissBank: async (action: 'deposit' | 'withdraw', amount: number): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/player/swiss-bank', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              },
+              body: JSON.stringify({ action, amount })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to process Swiss Bank transaction');
+            }
+
+            set((state) => ({
+              player: data.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        searchPlayer: async (targetUsername: string): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/combat/search-player', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              },
+              body: JSON.stringify({ targetUsername })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to search for player');
+            }
+
+            // Update player with search data
+            set((state) => ({
+              player: { ...state.player!, searchingFor: { 
+                targetId: '', 
+                searchStartTime: new Date().toISOString(),
+                searchEndTime: data.searchEndTime,
+                targetUsername,
+                isComplete: false
+              }},
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        shootPlayer: async (): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/combat/shoot-player', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to shoot player');
+            }
+
+            set((state) => ({
+              player: data.updatedAttacker || state.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            }));
+
+            return true;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return false;
+          }
+        },
+
+        cancelSearch: async (): Promise<boolean> => {
+          const { player } = get();
+          if (!player) return false;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await fetch('/api/combat/cancel-search', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+              }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to cancel search');
             }
 
             set((state) => ({

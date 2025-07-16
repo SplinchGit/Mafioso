@@ -78,24 +78,55 @@ export interface GameCrime {
   cooldown: number;
 }
 
-// If Player type is missing, add:
+export interface PlayerCar {
+  id: string;           // unique identifier
+  carType: number;      // 0-10 (which car model)
+  damage: number;       // 0-100 (car's current damage)
+  source: 'bought' | 'gta' | 'killed_player'; // how car was obtained
+}
+
+export interface PlayerStats {
+  crimesCommitted: number;
+  crimesSuccessful: number;
+  crimesFailed: number;
+  timesJailed: number;
+  timesHospitalized: number;
+  totalMoneyEarned: number;
+  totalRespectEarned: number;
+  rankUps: number;
+}
+
 export interface Player {
-  worldId: string;
-  username: string;
+  walletAddress: string; // Primary key - permanent identifier
+  worldId: string;       // Internal game ID
+  username: string;      // Can change on death
   money: number;
   respect: number;
   rank: number;
-  city: string;
-  carId: string | null;
-  stats: {
-    crimesCommitted: number;
-    crimesSuccessful: number;
-    crimesFailed: number;
-    totalMoneyEarned: number;
-    totalRespectEarned: number;
-  };
-  createdAt: string;
+  city: number;
+  cars: PlayerCar[];     // Array of owned cars
+  activeCar?: string;    // Unique ID of currently selected car
   lastActive: string;
+  createdAt: string;
+  jailUntil?: string;
+  hospitalUntil?: string;
+  stats: PlayerStats;
+  gunId?: number;        // 0-8, which gun they own (null if none)
+  protectionId?: number; // 0-8, which protection they own (null if none)
+  bullets: number;       // how many bullets they have
+  kills: number;         // total kills
+  deaths: number;        // total deaths - when shot, account resets
+  swissBank: number;     // money stored in swiss bank - safe from death
+  searchingFor?: {       // current target search information
+    targetId: string;
+    searchStartTime: string;
+    searchEndTime: string;
+    targetUsername?: string;
+    targetCity?: number;
+    isComplete?: boolean;
+  };
+  lastMeltTime?: string; // timestamp of last car melt
+  bulletFactoryId?: number; // city id 0-4 if they own a factory
 }
 
 // Game UI specific types

@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import Crimes from './pages/Crimes';
 import Travel from './pages/Travel';
 import Garage from './pages/Garage';
+import Store from './pages/Store';
+import Shoot from './pages/Shoot';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
@@ -148,6 +150,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Garage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/store" 
+              element={
+                <ProtectedRoute>
+                  <Store />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/shoot" 
+              element={
+                <ProtectedRoute>
+                  <Shoot />
                 </ProtectedRoute>
               } 
             />

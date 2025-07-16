@@ -2,8 +2,9 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { Player, CrimeResult, CrimeAttempt, PlayerCooldown } from '../../../shared/types';
-import { CRIMES, RANKS, CRIME_OUTCOMES, GAME_CONFIG } from '../../../shared/constants';
+import { CRIMES, RANKS, CRIME_OUTCOMES, GAME_CONFIG, CARS } from '../../../shared/constants';
 import logger from '../../shared/logger';
 
 const client = new DynamoDBClient({});
@@ -299,28 +300,15 @@ function calculateCrimeResult(player: Player, crime: typeof CRIMES[number]): Cri
   if (isSuccess) {
     // Check if this is Grand Theft Auto (special car reward)
     if (crime.name === "Grand Theft Auto") {
-      // Award random car instead of money
-      const CARS = [
-        { id: 0, name: "Fiat 500" },
-        { id: 1, name: "Ford Focus" },
-        { id: 2, name: "Honda Civic" },
-        { id: 3, name: "BMW 3 Series" },
-        { id: 4, name: "Audi A4" },
-        { id: 5, name: "Mercedes C-Class" },
-        { id: 6, name: "Porsche 911" },
-        { id: 7, name: "Ferrari 458" },
-        { id: 8, name: "Lamborghini Huracán" },
-        { id: 9, name: "Bugatti Veyron" },
-        { id: 10, name: "Ferrari LaFerrari" }
-      ];
-      const randomCar = CARS[Math.floor(Math.random() * CARS.length)];
+      // Award car based on weighted rarity system
+      const selectedCar = selectRandomCarByRarity();
       
       return {
         success: true,
         outcome: CRIME_OUTCOMES.SUCCESS,
         respectGained: crime.baseRespect,
-        message: `Successfully stole a ${randomCar.name}! It's now in your garage.`,
-        carAwarded: randomCar.id
+        message: `Successfully stole a ${selectedCar.name}! It's now in your garage.`,
+        carAwarded: selectedCar.id
       };
     } else {
       // Successful crime with money payout
@@ -366,7 +354,18 @@ async function processCrimeResult(player: Player, crime: typeof CRIMES[number], 
   if (result.success) {
     // Handle car reward for Grand Theft Auto
     if ((result as any).carAwarded !== undefined) {
-      updates.carId = (result as any).carAwarded;
+      const newCar: import('../../../shared/types').PlayerCar = {
+        id: randomUUID(),
+        carType: (result as any).carAwarded,
+        damage: 0, // New stolen car starts with no damage
+        source: 'gta'
+      };
+      updates.cars = [...player.cars, newCar];
+      
+      // Set as active car if player has no cars or no active car
+      if (player.cars.length === 0 || !player.activeCar) {
+        updates.activeCar = newCar.id;
+      }
     }
     
     updates.money = player.money + (result.moneyGained || 0);
@@ -388,6 +387,7 @@ async function processCrimeResult(player: Player, crime: typeof CRIMES[number], 
     const newRank = calculateNewRank(updates.respect || player.respect);
     if (newRank > player.rank) {
       updates.rank = newRank;
+      updates.bullets = (player.bullets || 0) + GAME_CONFIG.BULLETS_ON_RANKUP; // Award 1,337 bullets
       if (updates.stats) {
         updates.stats.rankUps = player.stats.rankUps + 1;
       }
@@ -462,4 +462,48 @@ async function logCrimeAttempt(attempt: CrimeAttempt): Promise<void> {
       id: `${attempt.playerId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     }
   }));
+}
+
+function selectRandomCarByRarity(): { id: number; name: string } {
+  // Define weighted probabilities for car tiers
+  // Higher tier cars have much lower drop rates
+  const carTiers = [
+    // Tier 1 - Common (50% total): ids 0-2
+    { ids: [0, 1, 2], weight: 50 },
+    // Tier 2 - Uncommon (30% total): ids 3-5  
+    { ids: [3, 4, 5], weight: 30 },
+    // Tier 3 - Rare (15% total): ids 6-7 (BMW X5, Nissan R35)
+    { ids: [6, 7], weight: 15 },
+    // Tier 4 - Epic (4% total): ids 8-9 (Lamborghini, Bugatti)
+    { ids: [8, 9], weight: 4 },
+    // Tier 5 - Legendary (2% total): id 10 (Ferrari - doubled chances)
+    { ids: [10], weight: 2 }
+  ];
+
+  // Calculate random tier based on weights
+  const totalWeight = carTiers.reduce((sum, tier) => sum + tier.weight, 0);
+  let random = Math.random() * totalWeight;
+  
+  let selectedTier;
+  for (const tier of carTiers) {
+    random -= tier.weight;
+    if (random <= 0) {
+      selectedTier = tier;
+      break;
+    }
+  }
+  
+  // If no tier selected (shouldn't happen), default to common
+  if (!selectedTier) {
+    selectedTier = carTiers[0];
+  }
+  
+  // Select random car from the selected tier
+  const randomCarId = selectedTier.ids[Math.floor(Math.random() * selectedTier.ids.length)];
+  const carData = CARS[randomCarId];
+  
+  return {
+    id: randomCarId,
+    name: carData.name
+  };
 }
