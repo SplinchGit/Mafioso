@@ -57,10 +57,12 @@ export interface VerifyCommandInput {
   verification_level?: VerificationLevel;
 }
 
-export enum VerificationLevel {
-  Orb = 'orb',
-  Device = 'device'
-}
+export const VerificationLevel = {
+  Orb: 'orb' as const,
+  Device: 'device' as const
+} as const;
+
+export type VerificationLevel = typeof VerificationLevel[keyof typeof VerificationLevel];
 
 export interface ISuccessResult {
   proof: string;

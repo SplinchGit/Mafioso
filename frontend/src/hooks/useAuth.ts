@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MiniKit, VerifyCommandInput, VerificationLevel, ISuccessResult } from '@worldcoin/minikit-js';
+import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
+import type { VerifyCommandInput, ISuccessResult } from '@worldcoin/minikit-js';
 import { useGameStore } from '../store/gameStore';
 
 export const useAuth = () => {
@@ -60,7 +61,8 @@ export const useAuth = () => {
       const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
       
       if (finalPayload.status === 'error') {
-        throw new Error(finalPayload.error_message || 'Verification failed');
+        console.error('Verification failed:', finalPayload);
+        throw new Error('Verification failed');
       }
 
       // Send to backend for verification
