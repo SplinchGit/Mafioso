@@ -14,7 +14,7 @@ A World Mini App built with React TypeScript and AWS Serverless architecture. Bu
 
 ## 📄 License
 
-UNLICENSED
+Proprietary. All rights reserved.
 
 ## 🎭 World Mini App
 
