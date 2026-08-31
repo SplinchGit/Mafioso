@@ -5,6 +5,8 @@ import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { CITIES } from '../../../shared/constants';
 import { CREW_BOSS_MIN_RANK, CityProp, DEFAULT_MAX_BET, PROPS, isHouseGameType, isPropType, propId } from '../../../shared/props';
+import { handler as setMaxBetHandler } from './setMaxBet';
+import { handler as playHouseGameHandler } from './playHouseGame';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -22,6 +24,12 @@ const headers = {
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
+    if (event.body) {
+      const request = JSON.parse(event.body) as { action?: string };
+      if (request.action === 'set_max_bet') return setMaxBetHandler(event);
+      if (request.action === 'play_house_game') return playHouseGameHandler(event);
+    }
+
     const authHeader = event.headers.Authorization || event.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
       return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Authentication required' }) };
