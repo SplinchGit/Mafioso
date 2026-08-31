@@ -6,27 +6,29 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: mafioso-aws-staging
+  group: mafioso-aws-production
   cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     env:
       AWS_REGION: eu-west-2
-      AWS_ACCOUNT_ID: '152034782674'
-      STACK_NAME: mafioso-aws-staging
-      STAGE: staging
-      JWT_SECRET_ARN: arn:aws:secretsmanager:eu-west-2:152034782674:secret:Mafioso_JWT-rY4ENa
+      AWS_ACCOUNT_ID: '620214494442'
+      AWS_DEPLOY_ROLE_ARN: arn:aws:iam::620214494442:role/mafioso-github-deploy
+      STACK_NAME: mafioso-backend-prod
+      STAGE: prod
 
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: |
             backend/package-lock.json
@@ -34,11 +36,11 @@ jobs:
 
       - uses: aws-actions/setup-sam@v2
 
-      - name: Configure AWS credentials
+      - name: Configure short-lived AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.AWS_DEPLOY_ROLE_ARN }}
+          role-session-name: mafioso-github-deploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Refuse wrong AWS account
@@ -48,26 +50,31 @@ jobs:
           echo "AWS account: $ACTUAL_ACCOUNT"
           test "$ACTUAL_ACCOUNT" = "$AWS_ACCOUNT_ID"
 
-      - name: Build backend
+      - name: Build backend and Lambda dependency layer
         working-directory: backend
         run: |
           npm ci
+          npx jest --runInBand
           npm run build
+          npm ci --omit=dev --prefix layer/nodejs
 
       - name: Validate AWS-only SAM template
         run: sam validate --template-file infrastructure/template-aws.yaml --region "$AWS_REGION"
 
+      - name: Build deployable SAM artifacts
+        run: sam build --template-file infrastructure/template-aws.yaml --region "$AWS_REGION"
+
       - name: Deploy backend and infrastructure
         run: |
           sam deploy \
-            --template-file infrastructure/template-aws.yaml \
+            --template-file .aws-sam/build/template.yaml \
             --stack-name "$STACK_NAME" \
             --region "$AWS_REGION" \
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --resolve-s3 \
-            --parameter-overrides Stage="$STAGE" JWTSecretArn="$JWT_SECRET_ARN"
+            --parameter-overrides Stage="$STAGE"
 
       - name: Read stack outputs
         id: outputs
@@ -76,6 +83,7 @@ jobs:
           output() { aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
           echo "user_pool_id=$(output UserPoolId)" >> "$GITHUB_OUTPUT"
           echo "user_pool_client_id=$(output UserPoolClientId)" >> "$GITHUB_OUTPUT"
+          echo "api_url=$(output ApiUrl)" >> "$GITHUB_OUTPUT"
           echo "web_bucket=$(output WebBucketName)" >> "$GITHUB_OUTPUT"
           echo "distribution_id=$(output CloudFrontDistributionId)" >> "$GITHUB_OUTPUT"
           echo "web_url=$(output WebUrl)" >> "$GITHUB_OUTPUT"
@@ -85,6 +93,7 @@ jobs:
         env:
           VITE_COGNITO_USER_POOL_ID: ${{ steps.outputs.outputs.user_pool_id }}
           VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ steps.outputs.outputs.user_pool_client_id }}
+          VITE_API_ENDPOINT: ${{ steps.outputs.outputs.web_url }}
         run: |
           npm ci
           npm run build
@@ -93,7 +102,13 @@ jobs:
         run: aws s3 sync frontend/dist "s3://${{ steps.outputs.outputs.web_bucket }}" --delete
 
       - name: Invalidate CloudFront
-        run: aws cloudfront create-invalidation --distribution-id "${{ steps.outputs.outputs.distribution_id }}" --paths '/*'
+        shell: bash
+        run: |
+          INVALIDATION_ID="$(aws cloudfront create-invalidation --distribution-id "${{ steps.outputs.outputs.distribution_id }}" --paths '/*' --query Invalidation.Id --output text)"
+          aws cloudfront wait invalidation-completed --distribution-id "${{ steps.outputs.outputs.distribution_id }}" --id "$INVALIDATION_ID"
 
-      - name: Deployment URL
-        run: echo "Mafioso is live at ${{ steps.outputs.outputs.web_url }}"
+      - name: Smoke test live game
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --retry 5 --retry-delay 5 "${{ steps.outputs.outputs.web_url }}/" > /dev/null
+          echo "Mafioso is live at ${{ steps.outputs.outputs.web_url }}"

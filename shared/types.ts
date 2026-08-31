@@ -1,4 +1,4 @@
-import type { CrimeOutcome, RankType, CityType, CrimeType, CarType } from './constants';
+import type { CrimeOutcome, RankType, CityType, CrimeType, CarType, GoodId } from './constants';
 
 export interface Player {
   walletAddress: string; // Primary key - permanent identifier
@@ -14,6 +14,7 @@ export interface Player {
   createdAt: string;
   jailUntil?: string;
   hospitalUntil?: string;
+  travelUntil?: string;
   stats: PlayerStats;
   gunId?: number;        // 0-8, which gun they own (null if none)
   protectionId?: number; // 0-8, which protection they own (null if none)
@@ -24,6 +25,38 @@ export interface Player {
   searchingFor?: SearchData; // current target search information
   lastMeltTime?: string; // timestamp of last car melt
   bulletFactoryId?: number; // city id 0-4 if they own a factory (null if none)
+  goods?: GoodsInventory; // portable goods carried between city markets
+  goodsCostBasis?: Partial<GoodsInventory>; // total purchase cost held per good
+  crewId?: string;
+  crewRole?: 'boss' | 'member';
+}
+
+export type GoodsInventory = Record<GoodId, number>;
+
+export interface Crew {
+  crewId: string;
+  name: string;
+  bossId: string;
+  joinCode: string;
+  memberIds: string[];
+  createdAt: string;
+  gabbagoolActiveUntil?: string;
+  gabbagoolLastPurchasedAt?: string;
+}
+
+export interface CrewMemberSummary {
+  userId: string;
+  username: string;
+  role: 'boss' | 'member';
+  rank: number;
+}
+
+export interface CrewStatusResponse {
+  success: boolean;
+  crew: Crew | null;
+  members: CrewMemberSummary[];
+  gabbagoolActive: boolean;
+  player: Player;
 }
 
 export interface PlayerStats {
@@ -168,6 +201,21 @@ export interface SwissBankResponse {
   success: boolean;
   player: Player;
   message: string;
+}
+
+export interface GoodsTradeResponse {
+  success: boolean;
+  player: Player;
+  message: string;
+  trade: {
+    goodId: GoodId;
+    action: 'buy' | 'sell';
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    profit: number;
+    crewKickback: number;
+  };
 }
 
 export interface CarMarketplaceResponse {

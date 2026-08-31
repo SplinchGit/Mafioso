@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import type { Player, GameState, CrimeResult } from '../../../shared/types';
+import type { Player, GameState, CrimeResult, GoodsTradeResponse } from '../../../shared/types';
+import type { GoodId } from '../../../shared/constants';
+import { apiFetch } from '../utils/api';
 
 interface GameStore extends GameState {
   // Actions
@@ -14,6 +16,7 @@ interface GameStore extends GameState {
   // Game actions
   commitCrime: (crimeId: number) => Promise<CrimeResult | null>;
   travel: (cityId: number) => Promise<boolean>;
+  tradeGoods: (goodId: GoodId, action: 'buy' | 'sell', quantity: number) => Promise<GoodsTradeResponse | null>;
   buyCar: (carId: number) => Promise<boolean>;
   buyGun: (gunId: number) => Promise<boolean>;
   buyProtection: (protectionId: number) => Promise<boolean>;
@@ -74,12 +77,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/crimes/commit', {
+            const response = await apiFetch('/crimes/commit', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ crimeId })
             });
 
@@ -111,12 +110,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/player/travel', {
+            const response = await apiFetch('/player/travel', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ cityId })
             });
 
@@ -126,8 +121,13 @@ export const useGameStore = create<GameStore>()(
               throw new Error(data.error || 'Failed to travel');
             }
 
+            const updatedPlayer = data.data?.player ?? data.player;
+            if (!updatedPlayer) {
+              throw new Error('Travel response did not include the updated player');
+            }
+
             set((state) => ({
-              player: data.player,
+              player: updatedPlayer,
               isLoading: false,
               lastUpdate: new Date().toISOString()
             }));
@@ -140,6 +140,41 @@ export const useGameStore = create<GameStore>()(
           }
         },
 
+        tradeGoods: async (
+          goodId: GoodId,
+          action: 'buy' | 'sell',
+          quantity: number
+        ): Promise<GoodsTradeResponse | null> => {
+          const { player } = get();
+          if (!player) return null;
+
+          set({ isLoading: true, error: null });
+
+          try {
+            const response = await apiFetch('/player/trade-goods', {
+              method: 'POST',
+              body: JSON.stringify({ goodId, action, quantity })
+            });
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to trade goods');
+            }
+
+            set({
+              player: data.player,
+              isLoading: false,
+              lastUpdate: new Date().toISOString()
+            });
+
+            return data as GoodsTradeResponse;
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            set({ error: errorMessage, isLoading: false });
+            return null;
+          }
+        },
+
         buyCar: async (carId: number): Promise<boolean> => {
           const { player } = get();
           if (!player) return false;
@@ -147,12 +182,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/player/buy-car', {
+            const response = await apiFetch('/player/buy-car', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ carId })
             });
 
@@ -183,12 +214,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/player/buy-gun', {
+            const response = await apiFetch('/player/buy-gun', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ gunId })
             });
 
@@ -219,12 +246,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/player/buy-protection', {
+            const response = await apiFetch('/player/buy-protection', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ protectionId })
             });
 
@@ -255,12 +278,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/player/swiss-bank', {
+            const response = await apiFetch('/player/swiss-bank', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ action, amount })
             });
 
@@ -291,12 +310,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/combat/search-player', {
+            const response = await apiFetch('/combat/search-player', {
               method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
               body: JSON.stringify({ targetUsername })
             });
 
@@ -334,12 +349,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/combat/shoot-player', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              }
+            const response = await apiFetch('/combat/shoot-player', {
+              method: 'POST'
             });
 
             const data = await response.json();
@@ -369,12 +380,8 @@ export const useGameStore = create<GameStore>()(
           set({ isLoading: true, error: null });
 
           try {
-            const response = await fetch('/api/combat/cancel-search', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              }
+            const response = await apiFetch('/combat/cancel-search', {
+              method: 'POST'
             });
 
             const data = await response.json();
@@ -450,8 +457,11 @@ export const useGameStore = create<GameStore>()(
       }),
       {
         name: 'mafioso-game-store',
+        version: 2,
+        migrate: (persistedState: unknown) => ({
+          lastUpdate: (persistedState as { lastUpdate?: string } | null)?.lastUpdate
+        }),
         partialize: (state) => ({
-          player: state.player,
           lastUpdate: state.lastUpdate
         })
       }

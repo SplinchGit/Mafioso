@@ -69,6 +69,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         deaths: 0,
         swissBank: GAME_CONFIG.STARTING_SWISS_BANK,
         cars: [],
+        goods: { booze: 0, prozac: 0, weed: 0, crystal: 0, fashion: 0 },
+        goodsCostBasis: { booze: 0, prozac: 0, weed: 0, crystal: 0, fashion: 0 },
         stats: {
           crimesCommitted: 0,
           crimesSuccessful: 0,

@@ -12,6 +12,10 @@ import Store from './pages/Store';
 import Shoot from './pages/Shoot';
 import Props from './pages/Props';
 import ShootCalculator from './pages/ShootCalculator';
+import BulletFactory from './pages/BulletFactory';
+import Crew from './pages/Crew';
+import Goods from './pages/Goods';
+import Marketplace from './pages/Marketplace';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
@@ -82,6 +86,10 @@ function App() {
             <Route path="/shoot" element={<ProtectedRoute><Shoot /></ProtectedRoute>} />
             <Route path="/shoot-calculator" element={<ProtectedRoute><ShootCalculator /></ProtectedRoute>} />
             <Route path="/props" element={<ProtectedRoute><Props /></ProtectedRoute>} />
+            <Route path="/goods" element={<ProtectedRoute><Goods /></ProtectedRoute>} />
+            <Route path="/crew" element={<ProtectedRoute><Crew /></ProtectedRoute>} />
+            <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/bullet-factories" element={<ProtectedRoute><BulletFactory /></ProtectedRoute>} />
             <Route path="/" element={player ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           </Routes>
         </main>

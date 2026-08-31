@@ -31,15 +31,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const travelTimeSeconds = calculateTravelTime(player);
     const updatedCars = player.cars.map(car => car.id === player.activeCar ? { ...car, damage: Math.min(100, car.damage + GAME_CONFIG.CAR_DAMAGE_PER_TRAVEL) } : car);
     const now = new Date().toISOString();
+    const travelUntil = new Date(Date.now() + travelTimeSeconds * 1000).toISOString();
 
     let update;
     try {
       update = await docClient.send(new UpdateCommand({
         TableName: PLAYERS_TABLE,
         Key: { worldId: player.worldId },
-        UpdateExpression: 'ADD money :debit SET city = :city, cars = :cars, lastActive = :now',
-        ConditionExpression: 'money >= :cost',
-        ExpressionAttributeValues: { ':debit': -travelCost, ':cost': travelCost, ':city': cityId, ':cars': updatedCars, ':now': now },
+        UpdateExpression: 'ADD money :debit SET city = :city, cars = :cars, travelUntil = :travelUntil, lastActive = :now',
+        ConditionExpression: 'money >= :cost AND city = :expectedCity AND cars = :expectedCars AND (attribute_not_exists(travelUntil) OR travelUntil <= :now)',
+        ExpressionAttributeValues: { ':debit': -travelCost, ':cost': travelCost, ':city': cityId, ':expectedCity': player.city, ':cars': updatedCars, ':expectedCars': player.cars, ':travelUntil': travelUntil, ':now': now },
         ReturnValues: 'ALL_NEW',
       }));
     } catch (error: any) {
@@ -47,7 +48,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       throw error;
     }
 
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, data: { player: update.Attributes as Player, travelTimeSeconds, message: `Successfully traveled to ${CITIES[cityId].name} in ${Math.ceil(travelTimeSeconds / 60)} minutes` } }) };
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, data: { player: update.Attributes as Player, travelTimeSeconds, message: `Journey to ${CITIES[cityId].name} started. Operations unlock in ${Math.ceil(travelTimeSeconds / 60)} minutes.` } }) };
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Invalid authentication token' }) };
     console.error('travel failed', error);
@@ -56,6 +57,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 };
 
 function validateTravel(player: Player, cityId: number): string | null {
+  if (player.travelUntil && new Date(player.travelUntil) > new Date()) return 'You are already travelling';
   if (player.jailUntil && new Date(player.jailUntil) > new Date()) return 'You cannot travel while in jail';
   if (player.hospitalUntil && new Date(player.hospitalUntil) > new Date()) return 'You cannot travel while in the hospital';
   if (player.city === cityId) return 'You are already in this city';
@@ -73,6 +75,5 @@ function calculateTravelTime(player: Player): number {
   if (!activeCar) return GAME_CONFIG.TRAVEL_TIME;
   const carData = CARS[activeCar.carType];
   if (!carData) return GAME_CONFIG.TRAVEL_TIME;
-  const maxSpeed = 100, minSpeed = 45, maxTime = 10800, minTime = 60;
-  return Math.ceil((maxTime - minTime) * (maxSpeed - carData.speed) / (maxSpeed - minSpeed) + minTime);
+  return carData.travelTimeSeconds;
 }

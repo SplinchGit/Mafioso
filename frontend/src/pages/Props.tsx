@@ -2,13 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CITIES } from '../../../shared/constants';
 import {
   CHOP_SHOP_BULLETS_PER_DAY,
-  CityProp,
   DEFAULT_BULLET_PRICE,
   DEFAULT_MAX_BET,
   PROPS,
-  PropType,
   isHouseGameType,
 } from '../../../shared/props';
+import type { CityProp, PropType } from '../../../shared/props';
 import { useGameStore } from '../store/gameStore';
 
 interface CityPropsResponse {

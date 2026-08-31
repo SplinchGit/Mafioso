@@ -7,15 +7,14 @@ Parameters:
     Type: String
     Default: staging
     AllowedValues: [dev, staging, prod]
-  JWTSecretArn:
-    Type: String
-    Description: ARN of the Mafioso JWT secret in AWS Secrets Manager
 
 Globals:
   Function:
     Runtime: nodejs20.x
     Timeout: 30
     MemorySize: 256
+    Layers:
+      - !Ref RuntimeDependenciesLayer
     Environment:
       Variables:
         PLAYERS_TABLE: !Ref PlayersTable
@@ -23,10 +22,31 @@ Globals:
         CRIME_HISTORY_TABLE: !Ref CrimeHistoryTable
         CITY_PROPS_TABLE: !Ref CityPropsTable
         CAR_LISTINGS_TABLE: !Ref CarListingsTable
+        CREWS_TABLE: !Ref CrewsTable
+        BULLET_FACTORIES_TABLE: !Ref BulletFactoriesTable
         JWT_SECRET_ARN: !Ref JWTSecretArn
         JWT_SECRET: !Sub '{{resolve:secretsmanager:${JWTSecretArn}:SecretString}}'
 
 Resources:
+  JWTSecretArn:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub 'mafioso-${Stage}-jwt'
+      Description: Signing secret for Mafioso game sessions
+      GenerateSecretString:
+        PasswordLength: 64
+        ExcludePunctuation: true
+
+  RuntimeDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'mafioso-${Stage}-runtime'
+      Description: Runtime packages shared by the Mafioso Lambda functions
+      ContentUri: ../backend/layer/
+      CompatibleRuntimes: [nodejs20.x]
+
   MafiosoApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -42,6 +62,8 @@ Resources:
 
   UserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       UserPoolName: !Sub 'mafioso-${Stage}'
       UsernameAttributes: [email]
@@ -78,6 +100,8 @@ Resources:
 
   PlayersTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub 'mafioso-${Stage}-players-v2'
       BillingMode: PAY_PER_REQUEST
@@ -99,6 +123,8 @@ Resources:
 
   CooldownsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub 'mafioso-${Stage}-cooldowns-v2'
       BillingMode: PAY_PER_REQUEST
@@ -118,6 +144,8 @@ Resources:
 
   CrimeHistoryTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub 'mafioso-${Stage}-crime-history-v2'
       BillingMode: PAY_PER_REQUEST
@@ -130,6 +158,8 @@ Resources:
 
   CityPropsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub 'mafioso-${Stage}-city-props-v2'
       BillingMode: PAY_PER_REQUEST
@@ -142,6 +172,8 @@ Resources:
 
   CarListingsTable:
     Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub 'mafioso-${Stage}-car-listings-v2'
       BillingMode: PAY_PER_REQUEST
@@ -152,11 +184,39 @@ Resources:
         - AttributeName: id
           KeyType: HASH
 
+  CrewsTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub 'mafioso-${Stage}-crews-v2'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: crewId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: crewId
+          KeyType: HASH
+
+  BulletFactoriesTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub 'mafioso-${Stage}-bullet-factories-v2'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: cityId
+          AttributeType: N
+      KeySchema:
+        - AttributeName: cityId
+          KeyType: HASH
+
   CognitoSessionFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/auth/
-      Handler: cognitoSession.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/auth/cognitoSession.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - Statement:
@@ -176,8 +236,8 @@ Resources:
   ValidateTokenFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/auth/
-      Handler: validateToken.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/auth/validateToken.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - Statement:
@@ -192,8 +252,8 @@ Resources:
   ProfileFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/player/
-      Handler: getProfile.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/getProfile.handler
       Policies:
         - DynamoDBReadPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -204,8 +264,8 @@ Resources:
   CommitCrimeFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/crimes/
-      Handler: commitCrime.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/crimes/commitCrime.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CooldownsTable }
@@ -222,8 +282,8 @@ Resources:
   BuyGunFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/player/
-      Handler: buyGun.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/buyGun.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -234,8 +294,8 @@ Resources:
   BuyProtectionFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/player/
-      Handler: buyProtection.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/buyProtection.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -246,8 +306,8 @@ Resources:
   SwissBankFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/player/
-      Handler: swissBank.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/swissBank.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -258,8 +318,8 @@ Resources:
   TravelFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/player/
-      Handler: travel.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/travel.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -267,11 +327,48 @@ Resources:
           Type: Api
           Properties: { RestApiId: !Ref MafiosoApi, Path: /api/player/travel, Method: post }
 
+  TradeGoodsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/player/tradeGoods.handler
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
+        - DynamoDBReadPolicy: { TableName: !Ref CrewsTable }
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref JWTSecretArn
+      Events:
+        TradeGoods:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/player/trade-goods, Method: post }
+
+  ManageCrewFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/crew/manageCrew.handler
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref CrewsTable }
+        - Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref JWTSecretArn
+      Events:
+        CrewStatus:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/crew/status, Method: get }
+        ManageCrew:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/crew/manage, Method: post }
+
   SearchPlayerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/combat/
-      Handler: searchPlayer.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/combat/searchPlayer.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -282,8 +379,8 @@ Resources:
   ShootPlayerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/combat/
-      Handler: shootPlayer.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/combat/shootPlayer.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -294,8 +391,8 @@ Resources:
   CancelSearchFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/combat/
-      Handler: cancelSearch.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/combat/cancelSearch.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -306,8 +403,8 @@ Resources:
   GetCarsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/garage/
-      Handler: getCars.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/garage/getCars.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -318,8 +415,8 @@ Resources:
   ActivateCarFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/garage/
-      Handler: activateCar.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/garage/activateCar.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -330,8 +427,8 @@ Resources:
   RepairCarFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/garage/
-      Handler: repairCar.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/garage/repairCar.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -342,8 +439,8 @@ Resources:
   MeltCarFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/garage/
-      Handler: meltCar.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/garage/meltCar.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
       Events:
@@ -354,8 +451,8 @@ Resources:
   SearchListingsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/marketplace/
-      Handler: searchListings.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/marketplace/searchListings.handler
       Policies:
         - DynamoDBReadPolicy: { TableName: !Ref CarListingsTable }
       Events:
@@ -366,8 +463,8 @@ Resources:
   ListCarFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/marketplace/
-      Handler: listCar.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/marketplace/listCar.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CarListingsTable }
@@ -379,8 +476,8 @@ Resources:
   BuyCarFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/marketplace/
-      Handler: buyCar.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/marketplace/buyCar.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CarListingsTable }
@@ -389,11 +486,50 @@ Resources:
           Type: Api
           Properties: { RestApiId: !Ref MafiosoApi, Path: /api/marketplace/buy, Method: post }
 
+  GetFactoryStatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/bulletfactory/getFactoryStatus.handler
+      Policies:
+        - DynamoDBReadPolicy: { TableName: !Ref PlayersTable }
+        - DynamoDBReadPolicy: { TableName: !Ref BulletFactoriesTable }
+      Events:
+        FactoryStatus:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/bulletfactory/status, Method: get }
+
+  CollectBulletsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/bulletfactory/collectBullets.handler
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref BulletFactoriesTable }
+      Events:
+        CollectBullets:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/bulletfactory/collect, Method: post }
+
+  TakeoverFactoryFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/bulletfactory/takeoverFactory.handler
+      Policies:
+        - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
+        - DynamoDBCrudPolicy: { TableName: !Ref BulletFactoriesTable }
+      Events:
+        TakeoverFactory:
+          Type: Api
+          Properties: { RestApiId: !Ref MafiosoApi, Path: /api/bulletfactory/takeover, Method: post }
+
   GetCityPropsFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/props/
-      Handler: getCityProps.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/props/getCityProps.handler
       Policies:
         - DynamoDBReadPolicy: { TableName: !Ref PlayersTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CityPropsTable }
@@ -405,8 +541,8 @@ Resources:
   ClaimPropFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../backend/dist/backend/functions/props/
-      Handler: claimProp.handler
+      CodeUri: ../backend/dist/
+      Handler: backend/functions/props/claimProp.handler
       Policies:
         - DynamoDBCrudPolicy: { TableName: !Ref PlayersTable }
         - DynamoDBCrudPolicy: { TableName: !Ref CityPropsTable }
@@ -417,6 +553,8 @@ Resources:
 
   WebBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub 'mafioso-${Stage}-${AWS::AccountId}-${AWS::Region}-web-v2'
       PublicAccessBlockConfiguration:
