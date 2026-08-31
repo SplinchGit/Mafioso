@@ -4,189 +4,48 @@ import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from '@aws-sdk/lib-
 import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { getJWTSecret } from '../../shared/utils';
-import logger from '../../shared/logger';
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
+const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players-v2';
+const INACTIVITY_TIMEOUT = 20 * 60 * 1000;
+const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'GET,OPTIONS' };
 
-const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players';
-const INACTIVITY_TIMEOUT = 20 * 60 * 1000; // 20 minutes in milliseconds
+interface TokenPayload { worldId: string; username: string; iat?: number; exp?: number }
 
-interface TokenPayload {
-  walletAddress: string;
-  username: string;
-  iat?: number;
-  exp?: number;
-}
-
-export const handler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  const requestId = event.requestContext.requestId;
-  await logger.info('Token validation request initiated', {
-    requestId,
-    operation: 'validate-token',
-    hasAuthHeader: !!(event.headers.Authorization || event.headers.authorization)
-  });
-
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
     const authHeader = event.headers.Authorization || event.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Missing or invalid authorization header'
-        })
-      };
-    }
+    if (!authHeader?.startsWith('Bearer ')) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Missing or invalid authorization header' }) };
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     const jwtSecret = await getJWTSecret();
-
     let payload: TokenPayload;
     try {
-      payload = jwt.verify(token, jwtSecret) as TokenPayload;
-    } catch (error) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Invalid or expired token'
-        })
-      };
+      payload = jwt.verify(authHeader.substring(7), jwtSecret) as TokenPayload;
+    } catch {
+      return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Invalid or expired token' }) };
     }
+    if (!payload.worldId) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Invalid session token' }) };
 
-    // Get player from database
-    const player = await getPlayerByWallet(payload.walletAddress);
-    
-    if (!player) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Player not found'
-        })
-      };
-    }
+    const result = await docClient.send(new GetCommand({ TableName: PLAYERS_TABLE, Key: { worldId: payload.worldId } }));
+    const player = result.Item as Player | undefined;
+    if (!player) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Player not found' }) };
 
-    // Check for inactivity timeout (20 minutes)
-    const lastActiveTime = new Date(player.lastActive).getTime();
     const now = Date.now();
-    
-    if (now - lastActiveTime > INACTIVITY_TIMEOUT) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'GET,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Session expired due to inactivity',
-          code: 'INACTIVITY_TIMEOUT'
-        })
-      };
+    if (now - new Date(player.lastActive).getTime() > INACTIVITY_TIMEOUT) {
+      return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Session expired due to inactivity', code: 'INACTIVITY_TIMEOUT' }) };
     }
 
-    // Update last active time
-    await updatePlayerLastActive(payload.walletAddress);
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS'
-      },
-      body: JSON.stringify({
-        success: true,
-        player: {
-          ...player,
-          lastActive: new Date().toISOString() // Return updated timestamp
-        }
-      })
-    };
-
-  } catch (error) {
-    await logger.error('Token validation error', {
-      requestId,
-      operation: 'validate-token',
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS'
-      },
-      body: JSON.stringify({
-        success: false,
-        error: 'Internal server error'
-      })
-    };
-  }
-};
-
-async function getPlayerByWallet(walletAddress: string): Promise<Player | null> {
-  try {
-    const result = await docClient.send(new GetCommand({
-      TableName: PLAYERS_TABLE,
-      Key: { walletAddress }
-    }));
-    
-    return result.Item as Player || null;
-  } catch (error) {
-    logger.errorSync('Error getting player by wallet', {
-      operation: 'get-player-by-wallet',
-      walletAddress,
-      error: error instanceof Error ? error.message : String(error)
-    });
-    return null;
-  }
-}
-
-async function updatePlayerLastActive(walletAddress: string): Promise<void> {
-  try {
+    const lastActive = new Date().toISOString();
     await docClient.send(new UpdateCommand({
       TableName: PLAYERS_TABLE,
-      Key: { walletAddress },
+      Key: { worldId: payload.worldId },
       UpdateExpression: 'SET lastActive = :lastActive',
-      ExpressionAttributeValues: {
-        ':lastActive': new Date().toISOString()
-      }
+      ExpressionAttributeValues: { ':lastActive': lastActive },
     }));
+
+    return { statusCode: 200, headers, body: JSON.stringify({ success: true, player: { ...player, lastActive } }) };
   } catch (error) {
-    logger.errorSync('Error updating last active', {
-      operation: 'update-last-active',
-      walletAddress,
-      error: error instanceof Error ? error.message : String(error)
-    });
+    console.error('validateToken failed', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: 'Internal server error' }) };
   }
-}
+};
