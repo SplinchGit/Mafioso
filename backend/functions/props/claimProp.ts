@@ -4,9 +4,19 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { CITIES } from '../../../shared/constants';
-import { CREW_BOSS_MIN_RANK, CityProp, DEFAULT_MAX_BET, PROPS, isHouseGameType, isPropType, propId } from '../../../shared/props';
+import {
+  CREW_BOSS_MIN_RANK,
+  CityProp,
+  DEFAULT_BULLET_PRICE,
+  DEFAULT_MAX_BET,
+  PROPS,
+  isHouseGameType,
+  isPropType,
+  propId,
+} from '../../../shared/props';
 import { handler as setMaxBetHandler } from './setMaxBet';
 import { handler as playHouseGameHandler } from './playHouseGame';
+import { handler as manageEconomyHandler } from './manageEconomy';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -28,6 +38,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const request = JSON.parse(event.body) as { action?: string };
       if (request.action === 'set_max_bet') return setMaxBetHandler(event);
       if (request.action === 'play_house_game') return playHouseGameHandler(event);
+      if (request.action === 'collect_restaurant' || request.action === 'set_bullet_price' || request.action === 'buy_bullets') {
+        return manageEconomyHandler(event);
+      }
     }
 
     const authHeader = event.headers.Authorization || event.headers.authorization;
@@ -85,9 +98,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       ownerId: player.worldId,
       ownerUsername: player.username,
       claimedAt: now,
+      lastAccruedAt: now,
       ...(isHouseGameType(type) ? { maxBet: DEFAULT_MAX_BET } : {}),
       ...(type === 'restaurant' ? { storedIncome: 0 } : {}),
-      ...(type === 'chop_shop' ? { storedBullets: 0 } : {}),
+      ...(type === 'chop_shop' ? { storedBullets: 0, bulletPrice: DEFAULT_BULLET_PRICE } : {}),
     };
 
     try {
