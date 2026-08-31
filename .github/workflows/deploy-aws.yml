@@ -1,0 +1,99 @@
+name: Deploy Mafioso to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: mafioso-aws-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      AWS_REGION: eu-west-2
+      AWS_ACCOUNT_ID: '152034782674'
+      STACK_NAME: mafioso-aws-staging
+      STAGE: staging
+      JWT_SECRET_ARN: arn:aws:secretsmanager:eu-west-2:152034782674:secret:Mafioso_JWT-rY4ENa
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - uses: aws-actions/setup-sam@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Refuse wrong AWS account
+        shell: bash
+        run: |
+          ACTUAL_ACCOUNT="$(aws sts get-caller-identity --query Account --output text)"
+          echo "AWS account: $ACTUAL_ACCOUNT"
+          test "$ACTUAL_ACCOUNT" = "$AWS_ACCOUNT_ID"
+
+      - name: Build backend
+        working-directory: backend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Validate AWS-only SAM template
+        run: sam validate --template-file infrastructure/template-aws.yaml --region "$AWS_REGION"
+
+      - name: Deploy backend and infrastructure
+        run: |
+          sam deploy \
+            --template-file infrastructure/template-aws.yaml \
+            --stack-name "$STACK_NAME" \
+            --region "$AWS_REGION" \
+            --capabilities CAPABILITY_IAM \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --resolve-s3 \
+            --parameter-overrides Stage="$STAGE" JWTSecretArn="$JWT_SECRET_ARN"
+
+      - name: Read stack outputs
+        id: outputs
+        shell: bash
+        run: |
+          output() { aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$AWS_REGION" --query "Stacks[0].Outputs[?OutputKey=='$1'].OutputValue" --output text; }
+          echo "user_pool_id=$(output UserPoolId)" >> "$GITHUB_OUTPUT"
+          echo "user_pool_client_id=$(output UserPoolClientId)" >> "$GITHUB_OUTPUT"
+          echo "web_bucket=$(output WebBucketName)" >> "$GITHUB_OUTPUT"
+          echo "distribution_id=$(output CloudFrontDistributionId)" >> "$GITHUB_OUTPUT"
+          echo "web_url=$(output WebUrl)" >> "$GITHUB_OUTPUT"
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_COGNITO_USER_POOL_ID: ${{ steps.outputs.outputs.user_pool_id }}
+          VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ steps.outputs.outputs.user_pool_client_id }}
+        run: |
+          npm ci
+          npm run build
+
+      - name: Publish frontend to S3
+        run: aws s3 sync frontend/dist "s3://${{ steps.outputs.outputs.web_bucket }}" --delete
+
+      - name: Invalidate CloudFront
+        run: aws cloudfront create-invalidation --distribution-id "${{ steps.outputs.outputs.distribution_id }}" --paths '/*'
+
+      - name: Deployment URL
+        run: echo "Mafioso is live at ${{ steps.outputs.outputs.web_url }}"
