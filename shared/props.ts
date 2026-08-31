@@ -64,6 +64,7 @@ export interface CityProp {
   bulletPrice?: number;
   storedIncome?: number;
   storedBullets?: number;
+  salesRevenue?: number;
   poolMaxStake?: number;
   poolChallenge?: PoolChallenge;
 }
