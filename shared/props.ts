@@ -37,6 +37,20 @@ export const CHOP_SHOP_BULLETS_PER_DAY = 2000;
 export const DEFAULT_BULLET_PRICE = 100;
 export const MIN_BULLET_PRICE = 1;
 
+export const DEFAULT_POOL_MAX_STAKE = 5000;
+export const POOL_HALL_RAKE_PERCENT = 5;
+export const POOL_CHALLENGE_TTL_MS = 15 * 60 * 1000;
+
+export interface PoolChallenge {
+  challengerId: string;
+  challengerUsername: string;
+  targetId: string;
+  targetUsername: string;
+  stake: number;
+  challengerAim: number;
+  createdAt: string;
+}
+
 export interface CityProp {
   propId: string;
   cityId: number;
@@ -50,6 +64,8 @@ export interface CityProp {
   bulletPrice?: number;
   storedIncome?: number;
   storedBullets?: number;
+  poolMaxStake?: number;
+  poolChallenge?: PoolChallenge;
 }
 
 export function propId(cityId: number, type: PropType): string {
