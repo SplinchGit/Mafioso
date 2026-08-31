@@ -9,6 +9,7 @@ import {
   CityProp,
   DEFAULT_BULLET_PRICE,
   DEFAULT_MAX_BET,
+  DEFAULT_POOL_MAX_STAKE,
   PROPS,
   isHouseGameType,
   isPropType,
@@ -104,7 +105,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       lastAccruedAt: now,
       ...(isHouseGameType(type) ? { maxBet: DEFAULT_MAX_BET } : {}),
       ...(type === 'restaurant' ? { storedIncome: 0 } : {}),
-      ...(type === 'chop_shop' ? { storedBullets: 0, bulletPrice: DEFAULT_BULLET_PRICE } : {}),
+      ...(type === 'chop_shop' ? { storedBullets: 0, bulletPrice: DEFAULT_BULLET_PRICE, salesRevenue: 0 } : {}),
+      ...(type === 'pool_hall' ? { poolMaxStake: DEFAULT_POOL_MAX_STAKE } : {}),
     };
 
     try {
