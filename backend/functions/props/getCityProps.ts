@@ -3,13 +3,20 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { BatchGetCommand, DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import * as jwt from 'jsonwebtoken';
 import { CITIES } from '../../../shared/constants';
-import { CityProp, PROPS, propId } from '../../../shared/props';
+import {
+  CHOP_SHOP_BULLETS_PER_DAY,
+  CityProp,
+  PROPS,
+  RESTAURANT_INCOME_PER_DAY,
+  propId,
+} from '../../../shared/props';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'mafioso-dev-secret';
 const CITY_PROPS_TABLE = process.env.CITY_PROPS_TABLE || 'mafioso-city-props';
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const headers = {
   'Content-Type': 'application/json',
@@ -17,6 +24,25 @@ const headers = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   'Access-Control-Allow-Methods': 'GET,OPTIONS',
 };
+
+function withProjectedAccrual(prop: CityProp): CityProp {
+  if (prop.type !== 'restaurant' && prop.type !== 'chop_shop') return prop;
+  const now = Date.now();
+  const last = new Date(prop.lastAccruedAt || prop.claimedAt || new Date(now).toISOString()).getTime();
+  const elapsed = Math.max(0, now - last);
+
+  if (prop.type === 'restaurant') {
+    return {
+      ...prop,
+      storedIncome: (prop.storedIncome || 0) + Math.floor((elapsed / DAY_MS) * RESTAURANT_INCOME_PER_DAY),
+    };
+  }
+
+  return {
+    ...prop,
+    storedBullets: (prop.storedBullets || 0) + Math.floor((elapsed / DAY_MS) * CHOP_SHOP_BULLETS_PER_DAY),
+  };
+}
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
@@ -42,7 +68,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     const owned = new Map<string, CityProp>();
     for (const item of result.Responses?.[CITY_PROPS_TABLE] || []) {
-      const prop = item as CityProp;
+      const prop = withProjectedAccrual(item as CityProp);
       owned.set(prop.type, prop);
     }
 
