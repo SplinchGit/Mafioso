@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CITIES } from '../../../shared/constants';
 import {
+  CHOP_SHOP_BULLETS_PER_DAY,
   CityProp,
   DEFAULT_BULLET_PRICE,
   DEFAULT_MAX_BET,
@@ -149,6 +150,9 @@ const Props = () => {
             const crewBossLocked = definition.ownership === 'crew_boss_only' && player.rank < 15;
             const houseGame = isHouseGameType(definition.type);
             const maxBet = prop?.maxBet ?? DEFAULT_MAX_BET;
+            const bulletPrice = prop?.bulletPrice ?? DEFAULT_BULLET_PRICE;
+            const bulletQuantity = Math.max(0, Math.floor(Number(values['bullet:quantity']) || 0));
+            const bulletTotal = bulletQuantity * bulletPrice;
 
             return (
               <section key={definition.type} className="rounded-xl border border-mafia-gray-700 bg-mafia-gray-800 p-5 shadow-lg">
@@ -177,18 +181,37 @@ const Props = () => {
                       )}
 
                       {definition.type === 'chop_shop' && (
-                        <div className="space-y-3">
-                          <div className="text-sm text-mafia-gray-400">Stock: {(prop?.storedBullets || 0).toLocaleString()} bullets</div>
-                          <div className="text-sm text-mafia-gray-400">Price: ${(prop?.bulletPrice ?? DEFAULT_BULLET_PRICE).toLocaleString()} each</div>
+                        <div className="space-y-4 rounded-lg border border-mafia-gray-700 bg-mafia-gray-900/40 p-4">
+                          <div>
+                            <div className="text-xs uppercase tracking-[0.15em] text-mafia-gray-500">Bullet Exchange</div>
+                            <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                              <div><span className="text-mafia-gray-500">Production</span><div className="font-semibold">{CHOP_SHOP_BULLETS_PER_DAY.toLocaleString()}/day</div></div>
+                              <div><span className="text-mafia-gray-500">In stock</span><div className="font-semibold">{(prop?.storedBullets || 0).toLocaleString()}</div></div>
+                              <div><span className="text-mafia-gray-500">Price</span><div className="font-semibold">${bulletPrice.toLocaleString()} each</div></div>
+                              {ownedByYou && <div><span className="text-mafia-gray-500">Sales</span><div className="font-semibold text-money">${(prop?.salesRevenue || 0).toLocaleString()}</div></div>}
+                            </div>
+                          </div>
+
                           {ownedByYou ? (
-                            <div className="flex gap-2">
-                              <input type="number" min="1" placeholder={String(prop?.bulletPrice ?? DEFAULT_BULLET_PRICE)} value={values['bullet:price'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:price': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
-                              <button onClick={setBulletPrice} disabled={busy !== null} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Set Price</button>
+                            <div className="space-y-2">
+                              <div className="text-xs uppercase tracking-wider text-mafia-gray-500">Set sale price</div>
+                              <div className="flex gap-2">
+                                <input type="number" min="1" placeholder={String(bulletPrice)} value={values['bullet:price'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:price': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
+                                <button onClick={setBulletPrice} disabled={busy !== null} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Set Price</button>
+                              </div>
+                              <div className="text-xs text-mafia-gray-500">Players buy this stock here; sale cash goes directly to you.</div>
                             </div>
                           ) : (
-                            <div className="flex gap-2">
-                              <input type="number" min="1" max={prop?.storedBullets || undefined} placeholder="Bullets" value={values['bullet:quantity'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:quantity': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
-                              <button onClick={buyBullets} disabled={busy !== null} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Buy</button>
+                            <div className="space-y-3">
+                              <div className="flex gap-2">
+                                <input type="number" min="1" max={prop?.storedBullets || undefined} placeholder="Bullets" value={values['bullet:quantity'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:quantity': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
+                                <button onClick={buyBullets} disabled={busy !== null || bulletQuantity < 1} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Buy</button>
+                              </div>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-mafia-gray-500">Total</span>
+                                <span className="font-bold text-money">${bulletTotal.toLocaleString()}</span>
+                              </div>
+                              <div className="text-xs text-mafia-gray-500">Your cash: ${player.money.toLocaleString()}</div>
                             </div>
                           )}
                         </div>
