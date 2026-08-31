@@ -5,378 +5,84 @@ import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
 import { Player, CarListing, CarMarketplaceResponse, PlayerCar } from '../../../shared/types';
 import { CARS } from '../../../shared/constants';
-import logger from '../../shared/logger';
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
-
+const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const JWT_SECRET = process.env.JWT_SECRET || 'mafioso-dev-secret';
 const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players';
 const CAR_LISTINGS_TABLE = process.env.CAR_LISTINGS_TABLE || 'mafioso-car-listings';
+const headers = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type,Authorization', 'Access-Control-Allow-Methods': 'POST,OPTIONS' };
 
-interface BuyCarRequest {
-  listingId: string;
-  expectedPrice: number; // Price lock to prevent exploit
-}
-
-export const handler = async (
-  event: APIGatewayProxyEvent
-): Promise<APIGatewayProxyResult> => {
-  const requestId = event.requestContext.requestId;
-  await logger.info('Buy car request initiated', {
-    requestId,
-    operation: 'buy-car',
-    hasBody: !!event.body
-  });
-
+export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   try {
-    // Verify authentication
     const authHeader = event.headers.Authorization || event.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Authentication required'
-        })
-      };
-    }
+    if (!authHeader?.startsWith('Bearer ')) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Authentication required' }) };
+    const decoded = jwt.verify(authHeader.substring(7), JWT_SECRET) as { worldId?: string };
+    if (!decoded.worldId || !event.body) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Invalid request' }) };
 
-    const token = authHeader.substring(7);
-    let decoded: any;
-    
-    try {
-      decoded = jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Invalid authentication token'
-        })
-      };
-    }
+    const { listingId, expectedPrice } = JSON.parse(event.body) as { listingId: string; expectedPrice: number };
+    if (!listingId || !Number.isInteger(expectedPrice) || expectedPrice < 0) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Valid listing ID and expected price are required' }) };
 
-    if (!event.body) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Request body is required'
-        })
-      };
-    }
-
-    const { listingId, expectedPrice }: BuyCarRequest = JSON.parse(event.body);
-
-    // Validate input
-    if (!listingId || typeof expectedPrice !== 'number') {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Valid listing ID and expected price are required'
-        })
-      };
-    }
-
-    // Get buyer and listing data
-    const [buyer, listing] = await Promise.all([
-      getPlayer(decoded.worldId),
-      getListing(listingId)
+    const [buyerResult, listingResult] = await Promise.all([
+      docClient.send(new GetCommand({ TableName: PLAYERS_TABLE, Key: { worldId: decoded.worldId } })),
+      docClient.send(new GetCommand({ TableName: CAR_LISTINGS_TABLE, Key: { id: listingId } })),
     ]);
+    const buyer = buyerResult.Item as Player | undefined;
+    const listing = listingResult.Item as CarListing | undefined;
+    if (!buyer) return { statusCode: 404, headers, body: JSON.stringify({ success: false, error: 'Player not found' }) };
+    if (!listing) return { statusCode: 404, headers, body: JSON.stringify({ success: false, error: 'Listing not found' }) };
+    if (!listing.active) return { statusCode: 409, headers, body: JSON.stringify({ success: false, error: 'This listing is no longer available' }) };
+    if (listing.price !== expectedPrice) return { statusCode: 409, headers, body: JSON.stringify({ success: false, error: 'Price has changed. Please refresh and try again.' }) };
+    if (buyer.worldId === listing.sellerId) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'You cannot buy your own car' }) };
+    if (buyer.jailUntil && new Date(buyer.jailUntil) > new Date()) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'You cannot purchase cars while in jail' }) };
+    if (buyer.hospitalUntil && new Date(buyer.hospitalUntil) > new Date()) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'You cannot purchase cars while in the hospital' }) };
+    if (buyer.money < listing.price) return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: `Insufficient funds. You need $${listing.price.toLocaleString()}` }) };
 
-    if (!buyer) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Player not found'
-        })
-      };
-    }
+    const sellerResult = await docClient.send(new GetCommand({ TableName: PLAYERS_TABLE, Key: { worldId: listing.sellerId } }));
+    const seller = sellerResult.Item as Player | undefined;
+    if (!seller) return { statusCode: 409, headers, body: JSON.stringify({ success: false, error: 'Seller not found' }) };
+    if (!seller.cars.some(car => car.id === listing.carId)) return { statusCode: 409, headers, body: JSON.stringify({ success: false, error: 'Seller no longer owns this car' }) };
 
-    if (!listing) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Listing not found'
-        })
-      };
-    }
+    const now = new Date().toISOString();
+    const newCar: PlayerCar = { id: crypto.randomUUID(), carType: listing.carType, damage: listing.damage, source: 'bought' };
+    const buyerCars = [...buyer.cars, newCar];
+    const sellerCars = seller.cars.filter(car => car.id !== listing.carId);
+    const sellerActiveCar = seller.activeCar === listing.carId ? (sellerCars[0]?.id) : seller.activeCar;
 
-    // Validate purchase
-    const validationResult = validateCarPurchase(buyer, listing, expectedPrice);
-    if (!validationResult.canPurchase) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: validationResult.reason
-        })
-      };
-    }
-
-    // Get seller data
-    const seller = await getPlayer(listing.sellerId);
-    if (!seller) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS'
-        },
-        body: JSON.stringify({
-          success: false,
-          error: 'Seller not found'
-        })
-      };
-    }
-
-    // Execute purchase transaction
-    const { updatedBuyer } = await executePurchase(buyer, seller, listing);
-
-    const carName = CARS[listing.carType]?.name || 'Unknown Car';
-    const response: CarMarketplaceResponse = {
-      success: true,
-      player: updatedBuyer,
-      message: `Successfully purchased ${carName} for $${listing.price.toLocaleString()}!`
-    };
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS'
-      },
-      body: JSON.stringify(response)
-    };
-
-  } catch (error) {
-    await logger.error('Buy car error', {
-      requestId,
-      operation: 'buy-car',
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS'
-      },
-      body: JSON.stringify({
-        success: false,
-        error: 'Internal server error'
-      })
-    };
-  }
-};
-
-async function getPlayer(worldId: string): Promise<Player | null> {
-  try {
-    const result = await docClient.send(new GetCommand({
-      TableName: PLAYERS_TABLE,
-      Key: { worldId }
-    }));
-    
-    return result.Item as Player || null;
-  } catch (error) {
-    logger.errorSync('Error getting player', {
-      operation: 'get-player',
-      worldId,
-      error: error instanceof Error ? error.message : String(error)
-    });
-    return null;
-  }
-}
-
-async function getListing(listingId: string): Promise<CarListing | null> {
-  try {
-    const result = await docClient.send(new GetCommand({
-      TableName: CAR_LISTINGS_TABLE,
-      Key: { id: listingId }
-    }));
-    
-    return result.Item as CarListing || null;
-  } catch (error) {
-    logger.errorSync('Error getting listing', {
-      operation: 'get-listing',
-      listingId,
-      error: error instanceof Error ? error.message : String(error)
-    });
-    return null;
-  }
-}
-
-function validateCarPurchase(buyer: Player, listing: CarListing, expectedPrice: number): { canPurchase: boolean; reason?: string } {
-  // Check if listing is active
-  if (!listing.active) {
-    return { canPurchase: false, reason: 'This listing is no longer available' };
-  }
-
-  // Price lock check - prevent bait and switch
-  if (listing.price !== expectedPrice) {
-    return { canPurchase: false, reason: 'Price has changed. Please refresh and try again.' };
-  }
-
-  // Check if buyer has enough money
-  if (buyer.money < listing.price) {
-    return { canPurchase: false, reason: `Insufficient funds. You need $${listing.price.toLocaleString()}` };
-  }
-
-  // Check if buyer is trying to buy their own car
-  if (buyer.worldId === listing.sellerId) {
-    return { canPurchase: false, reason: 'You cannot buy your own car' };
-  }
-
-  // Check if player is in jail or hospital
-  if (buyer.jailUntil && new Date(buyer.jailUntil) > new Date()) {
-    return { canPurchase: false, reason: 'You cannot purchase cars while in jail' };
-  }
-  
-  if (buyer.hospitalUntil && new Date(buyer.hospitalUntil) > new Date()) {
-    return { canPurchase: false, reason: 'You cannot purchase cars while in the hospital' };
-  }
-
-  return { canPurchase: true };
-}
-
-async function executePurchase(buyer: Player, seller: Player, listing: CarListing): Promise<{
-  updatedBuyer: Player;
-  updatedSeller: Player;
-}> {
-  const now = new Date().toISOString();
-
-  // Create new car for buyer (keeping same damage)
-  const newCarId = crypto.randomUUID();
-  const newCar: PlayerCar = {
-    id: newCarId,
-    carType: listing.carType,
-    damage: listing.damage,
-    source: 'bought'
-  };
-
-  // Remove car from seller's inventory
-  const updatedSellerCars = seller.cars.filter(car => car.id !== listing.carId);
-  
-  // Add car to buyer's inventory
-  const updatedBuyerCars = [...buyer.cars, newCar];
-
-  // Update active car if seller's active car was sold
-  let updatedSellerActiveCar = seller.activeCar;
-  if (seller.activeCar === listing.carId) {
-    updatedSellerActiveCar = updatedSellerCars.length > 0 ? updatedSellerCars[0].id : undefined;
-  }
-
-  // Execute transaction using DynamoDB transactions for atomicity
-  await docClient.send(new TransactWriteCommand({
-    TransactItems: [
-      // Update buyer
-      {
-        Update: {
+    try {
+      await docClient.send(new TransactWriteCommand({ TransactItems: [
+        { Update: {
           TableName: PLAYERS_TABLE,
           Key: { worldId: buyer.worldId },
-          UpdateExpression: 'SET money = :money, cars = :cars, lastActive = :lastActive',
-          ExpressionAttributeValues: {
-            ':money': buyer.money - listing.price,
-            ':cars': updatedBuyerCars,
-            ':lastActive': now
-          }
-        }
-      },
-      // Update seller
-      {
-        Update: {
+          UpdateExpression: 'ADD money :debit SET cars = :cars, lastActive = :now',
+          ConditionExpression: 'money >= :price',
+          ExpressionAttributeValues: { ':debit': -listing.price, ':price': listing.price, ':cars': buyerCars, ':now': now },
+        }},
+        { Update: {
           TableName: PLAYERS_TABLE,
           Key: { worldId: seller.worldId },
-          UpdateExpression: 'SET money = :money, cars = :cars, activeCar = :activeCar, lastActive = :lastActive',
-          ExpressionAttributeValues: {
-            ':money': seller.money + listing.price,
-            ':cars': updatedSellerCars,
-            ':activeCar': updatedSellerActiveCar,
-            ':lastActive': now
-          }
-        }
-      },
-      // Deactivate listing
-      {
-        Update: {
+          UpdateExpression: 'ADD money :credit SET cars = :cars, activeCar = :activeCar, lastActive = :now',
+          ConditionExpression: 'contains(cars, :sellerCar)',
+          ExpressionAttributeValues: { ':credit': listing.price, ':cars': sellerCars, ':activeCar': sellerActiveCar, ':now': now, ':sellerCar': seller.cars.find(car => car.id === listing.carId) },
+        }},
+        { Update: {
           TableName: CAR_LISTINGS_TABLE,
           Key: { id: listing.id },
-          UpdateExpression: 'SET active = :active',
-          ExpressionAttributeValues: {
-            ':active': false
-          }
-        }
-      }
-    ]
-  }));
+          UpdateExpression: 'SET active = :false',
+          ConditionExpression: 'active = :true AND price = :price AND sellerId = :sellerId',
+          ExpressionAttributeValues: { ':false': false, ':true': true, ':price': listing.price, ':sellerId': listing.sellerId },
+        }},
+      ] }));
+    } catch (error: any) {
+      if (error?.name === 'TransactionCanceledException') return { statusCode: 409, headers, body: JSON.stringify({ success: false, error: 'Purchase could not settle. Check your funds and refresh the listing.' }) };
+      throw error;
+    }
 
-  const updatedBuyer: Player = {
-    ...buyer,
-    money: buyer.money - listing.price,
-    cars: updatedBuyerCars,
-    lastActive: now
-  };
-
-  const updatedSeller: Player = {
-    ...seller,
-    money: seller.money + listing.price,
-    cars: updatedSellerCars,
-    activeCar: updatedSellerActiveCar,
-    lastActive: now
-  };
-
-  return { updatedBuyer, updatedSeller };
-}
+    const updatedBuyer: Player = { ...buyer, money: buyer.money - listing.price, cars: buyerCars, lastActive: now };
+    const response: CarMarketplaceResponse = { success: true, player: updatedBuyer, message: `Successfully purchased ${CARS[listing.carType]?.name || 'car'} for $${listing.price.toLocaleString()}!` };
+    return { statusCode: 200, headers, body: JSON.stringify(response) };
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Invalid authentication token' }) };
+    console.error('buyCar failed', error);
+    return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: 'Internal server error' }) };
+  }
+};
