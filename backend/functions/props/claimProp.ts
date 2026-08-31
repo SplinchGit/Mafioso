@@ -4,7 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dyn
 import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { CITIES } from '../../../shared/constants';
-import { CREW_BOSS_MIN_RANK, CityProp, PROPS, isPropType, propId } from '../../../shared/props';
+import { CREW_BOSS_MIN_RANK, CityProp, DEFAULT_MAX_BET, PROPS, isHouseGameType, isPropType, propId } from '../../../shared/props';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -77,6 +77,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       ownerId: player.worldId,
       ownerUsername: player.username,
       claimedAt: now,
+      ...(isHouseGameType(type) ? { maxBet: DEFAULT_MAX_BET } : {}),
       ...(type === 'restaurant' ? { storedIncome: 0 } : {}),
       ...(type === 'chop_shop' ? { storedBullets: 0 } : {}),
     };
