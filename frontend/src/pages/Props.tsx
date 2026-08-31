@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CITIES } from '../../../shared/constants';
-import { CityProp, DEFAULT_MAX_BET, PROPS, PropType, isHouseGameType } from '../../../shared/props';
+import {
+  CityProp,
+  DEFAULT_BULLET_PRICE,
+  DEFAULT_MAX_BET,
+  PROPS,
+  PropType,
+  isHouseGameType,
+} from '../../../shared/props';
 import { useGameStore } from '../store/gameStore';
 
 interface CityPropsResponse {
@@ -56,6 +63,20 @@ const Props = () => {
     return data;
   };
 
+  const runAction = async (key: string, body: Record<string, unknown>) => {
+    setBusy(key);
+    setMessage(null);
+    try {
+      const data = await postAction(body);
+      setMessage(data.message || 'Done');
+      await loadProps();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Action failed');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const claimProp = async (type: PropType) => {
     if (!player) return;
     setClaiming(type);
@@ -74,32 +95,30 @@ const Props = () => {
   const setMaxBet = async (type: PropType) => {
     if (!player || !isHouseGameType(type)) return;
     const maxBet = Number(values[`max:${type}`]);
-    setBusy(`max:${type}`);
-    setMessage(null);
-    try {
-      await postAction({ action: 'set_max_bet', cityId: player.city, type, maxBet });
-      setMessage(`Maximum ${type} bet set to ${maxBet}.`);
-      await loadProps();
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Failed to set max bet');
-    } finally {
-      setBusy(null);
-    }
+    await runAction(`max:${type}`, { action: 'set_max_bet', cityId: player.city, type, maxBet });
   };
 
   const placeBet = async (type: PropType) => {
     if (!player || !isHouseGameType(type)) return;
     const bet = Number(values[`bet:${type}`]);
-    setBusy(`bet:${type}`);
-    setMessage(null);
-    try {
-      const data = await postAction({ action: 'play_house_game', cityId: player.city, type, bet });
-      setMessage(data.message);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'Bet failed');
-    } finally {
-      setBusy(null);
-    }
+    await runAction(`bet:${type}`, { action: 'play_house_game', cityId: player.city, type, bet });
+  };
+
+  const collectRestaurant = async () => {
+    if (!player) return;
+    await runAction('restaurant:collect', { action: 'collect_restaurant', cityId: player.city });
+  };
+
+  const setBulletPrice = async () => {
+    if (!player) return;
+    const bulletPrice = Number(values['bullet:price']);
+    await runAction('bullet:price', { action: 'set_bullet_price', cityId: player.city, bulletPrice });
+  };
+
+  const buyBullets = async () => {
+    if (!player) return;
+    const quantity = Number(values['bullet:quantity']);
+    await runAction('bullet:buy', { action: 'buy_bullets', cityId: player.city, quantity });
   };
 
   if (!player || !city) return null;
@@ -142,9 +161,36 @@ const Props = () => {
                         <div className="font-semibold mt-1">{ownedByYou ? 'You' : prop?.ownerUsername || 'Unknown Mafioso'}</div>
                       </div>
 
+                      {definition.type === 'restaurant' && (
+                        <div className="space-y-3">
+                          <div className="text-sm text-mafia-gray-400">Till: ${(prop?.storedIncome || 0).toLocaleString()}</div>
+                          {ownedByYou && (
+                            <button onClick={collectRestaurant} disabled={busy !== null} className="w-full rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Collect Income</button>
+                          )}
+                        </div>
+                      )}
+
+                      {definition.type === 'chop_shop' && (
+                        <div className="space-y-3">
+                          <div className="text-sm text-mafia-gray-400">Stock: {(prop?.storedBullets || 0).toLocaleString()} bullets</div>
+                          <div className="text-sm text-mafia-gray-400">Price: ${(prop?.bulletPrice ?? DEFAULT_BULLET_PRICE).toLocaleString()} each</div>
+                          {ownedByYou ? (
+                            <div className="flex gap-2">
+                              <input type="number" min="1" placeholder={String(prop?.bulletPrice ?? DEFAULT_BULLET_PRICE)} value={values['bullet:price'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:price': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
+                              <button onClick={setBulletPrice} disabled={busy !== null} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Set Price</button>
+                            </div>
+                          ) : (
+                            <div className="flex gap-2">
+                              <input type="number" min="1" max={prop?.storedBullets || undefined} placeholder="Bullets" value={values['bullet:quantity'] ?? ''} onChange={(e) => setValues((v) => ({ ...v, 'bullet:quantity': e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
+                              <button onClick={buyBullets} disabled={busy !== null} className="rounded bg-mafia-red px-3 py-2 font-semibold disabled:opacity-50">Buy</button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {houseGame && (
                         <div className="space-y-3">
-                          <div className="text-sm text-mafia-gray-400">Max bet: {maxBet}</div>
+                          <div className="text-sm text-mafia-gray-400">Max bet: ${maxBet.toLocaleString()}</div>
                           {ownedByYou ? (
                             <div className="flex gap-2">
                               <input type="number" min="1" placeholder={String(maxBet)} value={values[`max:${definition.type}`] ?? ''} onChange={(e) => setValues((v) => ({ ...v, [`max:${definition.type}`]: e.target.value }))} className="min-w-0 flex-1 rounded bg-mafia-gray-900 border border-mafia-gray-600 px-3 py-2" />
@@ -157,6 +203,10 @@ const Props = () => {
                             </div>
                           )}
                         </div>
+                      )}
+
+                      {definition.type === 'pool_hall' && (
+                        <div className="text-sm text-mafia-gray-400">Pool wagers are next: the hall is owned and ready for the PvP match layer.</div>
                       )}
                     </>
                   ) : crewBossLocked ? (
