@@ -19,53 +19,18 @@ export interface PropDefinition {
 }
 
 export const PROPS: readonly PropDefinition[] = [
-  {
-    type: 'restaurant',
-    name: 'Restaurant',
-    icon: '🍝',
-    description: 'Produces steady passive income for its owner.',
-    ownership: 'any_player',
-    economy: 'passive_income',
-  },
-  {
-    type: 'chop_shop',
-    name: 'Chop Shop',
-    icon: '🔧',
-    description: 'Produces bullets for the family. Only a crew boss can own one.',
-    ownership: 'crew_boss_only',
-    economy: 'bullet_production',
-  },
-  {
-    type: 'blackjack',
-    name: 'Blackjack Table',
-    icon: '🃏',
-    description: 'Players wager against the owner acting as the house.',
-    ownership: 'any_player',
-    economy: 'house_game',
-  },
-  {
-    type: 'roulette',
-    name: 'Roulette Table',
-    icon: '🎡',
-    description: 'Players place roulette bets against the owner acting as the house.',
-    ownership: 'any_player',
-    economy: 'house_game',
-  },
-  {
-    type: 'pool_hall',
-    name: 'Pool Hall',
-    icon: '🎱',
-    description: 'A skill-based room where players can play one another for stakes.',
-    ownership: 'any_player',
-    economy: 'player_skill',
-  },
+  { type: 'restaurant', name: 'Restaurant', icon: '🍝', description: 'Produces steady passive income for its owner.', ownership: 'any_player', economy: 'passive_income' },
+  { type: 'chop_shop', name: 'Chop Shop', icon: '🔧', description: 'Produces bullets for the family. Only a crew boss can own one.', ownership: 'crew_boss_only', economy: 'bullet_production' },
+  { type: 'blackjack', name: 'Blackjack Table', icon: '🃏', description: 'Players wager against the owner acting as the house.', ownership: 'any_player', economy: 'house_game' },
+  { type: 'roulette', name: 'Roulette Table', icon: '🎡', description: 'Players place roulette bets against the owner acting as the house.', ownership: 'any_player', economy: 'house_game' },
+  { type: 'pool_hall', name: 'Pool Hall', icon: '🎱', description: 'A skill-based room where players can play one another for stakes.', ownership: 'any_player', economy: 'player_skill' },
 ] as const;
 
 export const CREW_BOSS_MIN_RANK = 15;
 export const HOUSE_WIN_PERCENT = 60;
 export const DEFAULT_MAX_BET = 1000;
 export const MIN_BET = 1;
-export const BLACKJACK_NATURAL_WIN_SHARE = 0.12; // ~4.8% of all hands when players win 40%.
+export const BLACKJACK_NATURAL_WIN_SHARE = 0.12;
 
 export const RESTAURANT_INCOME_PER_DAY = 25000;
 export const CHOP_SHOP_BULLETS_PER_DAY = 2000;
@@ -78,6 +43,7 @@ export interface CityProp {
   type: PropType;
   ownerId?: string;
   ownerUsername?: string;
+  ownerDeathsAtClaim?: number;
   claimedAt?: string;
   lastAccruedAt?: string;
   maxBet?: number;
