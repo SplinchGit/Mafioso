@@ -46,7 +46,18 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const newCar: PlayerCar = { id: crypto.randomUUID(), carType: listing.carType, damage: listing.damage, source: 'bought' };
     const buyerCars = [...buyer.cars, newCar];
     const sellerCars = seller.cars.filter(car => car.id !== listing.carId);
-    const sellerActiveCar = seller.activeCar === listing.carId ? (sellerCars[0]?.id) : seller.activeCar;
+    const soldActiveCar = seller.activeCar === listing.carId;
+    const nextActiveCar = soldActiveCar ? sellerCars[0]?.id : seller.activeCar;
+
+    const sellerUpdate = nextActiveCar
+      ? {
+          UpdateExpression: 'ADD money :credit SET cars = :cars, activeCar = :activeCar, lastActive = :now',
+          ExpressionAttributeValues: { ':credit': listing.price, ':cars': sellerCars, ':activeCar': nextActiveCar, ':now': now, ':expectedCars': seller.cars },
+        }
+      : {
+          UpdateExpression: 'ADD money :credit SET cars = :cars, lastActive = :now REMOVE activeCar',
+          ExpressionAttributeValues: { ':credit': listing.price, ':cars': sellerCars, ':now': now, ':expectedCars': seller.cars },
+        };
 
     try {
       await docClient.send(new TransactWriteCommand({ TransactItems: [
@@ -60,9 +71,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         { Update: {
           TableName: PLAYERS_TABLE,
           Key: { worldId: seller.worldId },
-          UpdateExpression: 'ADD money :credit SET cars = :cars, activeCar = :activeCar, lastActive = :now',
-          ConditionExpression: 'contains(cars, :sellerCar)',
-          ExpressionAttributeValues: { ':credit': listing.price, ':cars': sellerCars, ':activeCar': sellerActiveCar, ':now': now, ':sellerCar': seller.cars.find(car => car.id === listing.carId) },
+          ...sellerUpdate,
+          ConditionExpression: 'cars = :expectedCars',
         }},
         { Update: {
           TableName: CAR_LISTINGS_TABLE,
