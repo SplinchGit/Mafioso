@@ -67,6 +67,11 @@ export const DEFAULT_MAX_BET = 1000;
 export const MIN_BET = 1;
 export const BLACKJACK_NATURAL_WIN_SHARE = 0.12; // ~4.8% of all hands when players win 40%.
 
+export const RESTAURANT_INCOME_PER_DAY = 25000;
+export const CHOP_SHOP_BULLETS_PER_DAY = 2000;
+export const DEFAULT_BULLET_PRICE = 100;
+export const MIN_BULLET_PRICE = 1;
+
 export interface CityProp {
   propId: string;
   cityId: number;
@@ -74,7 +79,9 @@ export interface CityProp {
   ownerId?: string;
   ownerUsername?: string;
   claimedAt?: string;
+  lastAccruedAt?: string;
   maxBet?: number;
+  bulletPrice?: number;
   storedIncome?: number;
   storedBullets?: number;
 }
