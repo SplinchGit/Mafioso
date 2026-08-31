@@ -13,6 +13,7 @@ Globals:
         NONCES_TABLE: !Ref NoncesTable
         COOLDOWNS_TABLE: !Ref CooldownsTable
         CRIME_HISTORY_TABLE: !Ref CrimeHistoryTable
+        CITY_PROPS_TABLE: !Ref CityPropsTable
         JWT_SECRET_ARN: !Ref JWTSecretArn
         WORLD_ID_SECRET_ARN: !Ref WorldIdSecretArn
         WORLD_ID_APP_ID: !Ref WorldIdAppId
@@ -620,6 +621,43 @@ Resources:
             Path: /garage/melt
             Method: post
 
+  # Prop Functions
+  GetCityPropsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/props/
+      Handler: getCityProps.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CityPropsTable
+        - CloudWatchLogsFullAccess
+      Events:
+        GetCityProps:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /props
+            Method: get
+
+  ClaimPropFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/props/
+      Handler: claimProp.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CityPropsTable
+        - CloudWatchLogsFullAccess
+      Events:
+        ClaimProp:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /props/claim
+            Method: post
+
   # DynamoDB Tables
   PlayersTable:
     Type: AWS::DynamoDB::Table
@@ -698,6 +736,18 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: id
+          KeyType: HASH
+
+  CityPropsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'mafioso-${Stage}-city-props'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: propId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: propId
           KeyType: HASH
 
 Outputs:
