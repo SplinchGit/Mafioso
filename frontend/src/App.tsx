@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Amplify } from 'aws-amplify';
 import { useGameStore } from './store/gameStore';
 import { useInactivityLogout } from './hooks';
-import { shouldBlockBrowser } from './utils/deviceDetection';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Crimes from './pages/Crimes';
@@ -16,24 +15,19 @@ import ShootCalculator from './pages/ShootCalculator';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
-import BrowserBlock from './components/BrowserBlock';
 
-const amplifyConfig = {
-  API: {
-    REST: {
-      mafioso: {
-        endpoint: import.meta.env.VITE_API_ENDPOINT || 'https://api.mafioso.game',
-        region: import.meta.env.VITE_AWS_REGION || 'us-east-1'
-      }
-    }
-  }
-};
-
-Amplify.configure(amplifyConfig);
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      userPoolClientId: import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID,
+      loginWith: { email: true },
+    },
+  },
+});
 
 function App() {
   const { player, isLoading, error, setLoading } = useGameStore();
-  if (shouldBlockBrowser()) return <BrowserBlock />;
   useInactivityLogout();
 
   useEffect(() => {
@@ -42,7 +36,7 @@ function App() {
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
-          const response = await fetch('/api/auth/validate', { headers: { 'Authorization': `Bearer ${token}` } });
+          const response = await fetch('/api/auth/validate', { headers: { Authorization: `Bearer ${token}` } });
           if (response.ok) {
             const data = await response.json();
             useGameStore.getState().setPlayer(data.player);
@@ -51,8 +45,7 @@ function App() {
             const errorData = await response.json().catch(() => ({}));
             if (errorData.code === 'INACTIVITY_TIMEOUT') useGameStore.getState().setError('Session expired due to inactivity. Please sign in again.');
           }
-        } catch (error) {
-          console.error('Failed to validate token:', error);
+        } catch {
           localStorage.removeItem('auth_token');
         }
       }
