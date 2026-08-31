@@ -11,6 +11,7 @@ import Travel from './pages/Travel';
 import Garage from './pages/Garage';
 import Store from './pages/Store';
 import Shoot from './pages/Shoot';
+import Props from './pages/Props';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
@@ -168,6 +169,14 @@ function App() {
                   <Shoot />
                 </ProtectedRoute>
               } 
+            />
+            <Route
+              path="/props"
+              element={
+                <ProtectedRoute>
+                  <Props />
+                </ProtectedRoute>
+              }
             />
             <Route 
               path="/" 
