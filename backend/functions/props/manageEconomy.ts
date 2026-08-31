@@ -164,9 +164,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           Update: {
             TableName: CITY_PROPS_TABLE,
             Key: { propId: id },
-            UpdateExpression: 'SET storedBullets = :remaining, lastAccruedAt = :now',
+            UpdateExpression: 'SET storedBullets = :remaining, lastAccruedAt = :now ADD salesRevenue :total',
             ConditionExpression: 'ownerId = :owner',
-            ExpressionAttributeValues: { ':remaining': available - quantity, ':now': prop.lastAccruedAt, ':owner': prop.ownerId },
+            ExpressionAttributeValues: { ':remaining': available - quantity, ':now': prop.lastAccruedAt, ':owner': prop.ownerId, ':total': total },
           },
         },
         {
@@ -188,7 +188,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         },
       ] }));
 
-      return { statusCode: 200, headers, body: JSON.stringify({ success: true, quantity, total, message: `Bought ${quantity} bullets for $${total.toLocaleString()}.` }) };
+      return { statusCode: 200, headers, body: JSON.stringify({ success: true, quantity, total, unitPrice: price, message: `Bought ${quantity} bullets for $${total.toLocaleString()}.` }) };
     }
 
     return { statusCode: 400, headers, body: JSON.stringify({ success: false, error: 'Unknown economy action' }) };
