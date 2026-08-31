@@ -13,6 +13,7 @@ Globals:
         NONCES_TABLE: !Ref NoncesTable
         COOLDOWNS_TABLE: !Ref CooldownsTable
         CRIME_HISTORY_TABLE: !Ref CrimeHistoryTable
+        CITY_PROPS_TABLE: !Ref CityPropsTable
         JWT_SECRET_ARN: !Ref JWTSecretArn
         WORLD_ID_SECRET_ARN: !Ref WorldIdSecretArn
         WORLD_ID_APP_ID: !Ref WorldIdAppId
@@ -40,7 +41,6 @@ Parameters:
     Default: app_bc75ea0f4623eb64e1814126df474de3
 
 Resources:
-  # API Gateway
   MafiosoApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -51,7 +51,6 @@ Resources:
         AllowOrigin: "'*'"
         AllowCredentials: false
 
-  # Lambda Functions
   VerifyWorldIdFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -341,7 +340,6 @@ Resources:
             Path: /crimes/commit
             Method: post
 
-  # Player Functions
   BuyGunFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -351,21 +349,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         BuyGun:
           Type: Api
@@ -383,21 +366,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         BuyProtection:
           Type: Api
@@ -415,21 +383,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         SwissBank:
           Type: Api
@@ -447,10 +400,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-      Environment:
-        Variables:
-          JWT_SECRET: !Ref JwtSecret
-          PLAYERS_TABLE: !Ref PlayersTable
       Events:
         Travel:
           Type: Api
@@ -459,7 +408,6 @@ Resources:
             Path: /player/travel
             Method: post
 
-  # Combat Functions
   SearchPlayerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -469,21 +417,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         SearchPlayer:
           Type: Api
@@ -501,21 +434,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         ShootPlayer:
           Type: Api
@@ -533,21 +451,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-        - Statement:
-            - Effect: Allow
-              Action:
-                - secretsmanager:GetSecretValue
-              Resource:
-                - !Ref JWTSecretArn
-            - Effect: Allow
-              Action:
-                - logs:CreateLogGroup
-                - logs:CreateLogStream
-                - logs:PutLogEvents
-                - logs:DescribeLogGroups
-                - logs:DescribeLogStreams
-              Resource: 
-                - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/mafioso*"
       Events:
         CancelSearch:
           Type: Api
@@ -556,7 +459,6 @@ Resources:
             Path: /combat/cancel-search
             Method: post
 
-  # Garage Functions
   GetCarsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -566,10 +468,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-      Environment:
-        Variables:
-          JWT_SECRET: !Ref JwtSecret
-          PLAYERS_TABLE: !Ref PlayersTable
       Events:
         GetCars:
           Type: Api
@@ -587,10 +485,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-      Environment:
-        Variables:
-          JWT_SECRET: !Ref JwtSecret
-          PLAYERS_TABLE: !Ref PlayersTable
       Events:
         RepairCar:
           Type: Api
@@ -608,10 +502,6 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref PlayersTable
         - CloudWatchLogsFullAccess
-      Environment:
-        Variables:
-          JWT_SECRET: !Ref JwtSecret
-          PLAYERS_TABLE: !Ref PlayersTable
       Events:
         MeltCar:
           Type: Api
@@ -620,7 +510,42 @@ Resources:
             Path: /garage/melt
             Method: post
 
-  # DynamoDB Tables
+  GetCityPropsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/props/
+      Handler: getCityProps.handler
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref CityPropsTable
+        - CloudWatchLogsFullAccess
+      Events:
+        GetCityProps:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /props
+            Method: get
+
+  ClaimPropFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../backend/dist/backend/functions/props/
+      Handler: claimProp.handler
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref PlayersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref CityPropsTable
+        - CloudWatchLogsFullAccess
+      Events:
+        ClaimProp:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MafiosoApi
+            Path: /props/claim
+            Method: post
+
   PlayersTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -698,6 +623,18 @@ Resources:
           AttributeType: S
       KeySchema:
         - AttributeName: id
+          KeyType: HASH
+
+  CityPropsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'mafioso-${Stage}-city-props'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: propId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: propId
           KeyType: HASH
 
 Outputs:
