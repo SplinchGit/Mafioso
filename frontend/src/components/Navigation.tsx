@@ -19,6 +19,7 @@ const Navigation = () => {
     { path: '/travel', label: 'Travel', icon: '✈️' },
     { path: '/garage', label: 'Garage', icon: '🚗' },
     { path: '/store', label: 'Store', icon: '🏪' },
+    { path: '/props', label: 'Props', icon: '🏛️' },
     { path: '/shoot', label: 'Shoot', icon: '🎯' },
   ];
 
@@ -33,7 +34,6 @@ const Navigation = () => {
     <nav className="bg-mafia-gray-800 border-b border-mafia-gray-700 fixed top-0 w-full z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo and Title */}
           <div className="flex items-center">
             <Link to="/dashboard" className="flex items-center space-x-3">
               <span className="text-2xl">🎭</span>
@@ -41,7 +41,6 @@ const Navigation = () => {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
           <div className="hidden md:block">
             <div className="ml-10 flex items-baseline space-x-4">
               {navItems.map((item) => (
@@ -61,7 +60,6 @@ const Navigation = () => {
             </div>
           </div>
 
-          {/* Player Info */}
           <div className="hidden md:flex items-center space-x-4">
             <div className="text-right">
               <div className="text-sm font-medium text-white">{player.username}</div>
@@ -95,7 +93,6 @@ const Navigation = () => {
             </button>
           </div>
 
-          {/* Mobile menu button */}
           <div className="md:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -107,7 +104,6 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 bg-mafia-gray-700">
