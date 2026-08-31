@@ -17,6 +17,7 @@ import {
 import { handler as setMaxBetHandler } from './setMaxBet';
 import { handler as playHouseGameHandler } from './playHouseGame';
 import { handler as manageEconomyHandler } from './manageEconomy';
+import { handler as cleanupDeadPropsHandler } from './cleanupDeadProps';
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -38,6 +39,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       const request = JSON.parse(event.body) as { action?: string };
       if (request.action === 'set_max_bet') return setMaxBetHandler(event);
       if (request.action === 'play_house_game') return playHouseGameHandler(event);
+      if (request.action === 'cleanup_dead_props') return cleanupDeadPropsHandler(event);
       if (request.action === 'collect_restaurant' || request.action === 'set_bullet_price' || request.action === 'buy_bullets') {
         return manageEconomyHandler(event);
       }
@@ -97,6 +99,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       type,
       ownerId: player.worldId,
       ownerUsername: player.username,
+      ownerDeathsAtClaim: player.deaths || 0,
       claimedAt: now,
       lastAccruedAt: now,
       ...(isHouseGameType(type) ? { maxBet: DEFAULT_MAX_BET } : {}),
