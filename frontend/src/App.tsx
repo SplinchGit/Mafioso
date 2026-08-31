@@ -12,12 +12,12 @@ import Garage from './pages/Garage';
 import Store from './pages/Store';
 import Shoot from './pages/Shoot';
 import Props from './pages/Props';
+import ShootCalculator from './pages/ShootCalculator';
 import Navigation from './components/Navigation';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorBanner from './components/ErrorBanner';
 import BrowserBlock from './components/BrowserBlock';
 
-// Configure Amplify (you'll need to add your actual config)
 const amplifyConfig = {
   API: {
     REST: {
@@ -33,75 +33,43 @@ Amplify.configure(amplifyConfig);
 
 function App() {
   const { player, isLoading, error, setLoading } = useGameStore();
-  
-  // Check if browser should be blocked
-  if (shouldBlockBrowser()) {
-    return <BrowserBlock />;
-  }
-  
-  // Set up inactivity logout
+  if (shouldBlockBrowser()) return <BrowserBlock />;
   useInactivityLogout();
 
   useEffect(() => {
-    // Initialize app state on load
     const initializeApp = async () => {
       setLoading(true);
-      
-      // Check for existing auth token and validate session
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
-          // Validate token with backend
-          const response = await fetch('/api/auth/validate', {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          
+          const response = await fetch('/api/auth/validate', { headers: { 'Authorization': `Bearer ${token}` } });
           if (response.ok) {
             const data = await response.json();
             useGameStore.getState().setPlayer(data.player);
           } else {
-            // Invalid token or inactivity timeout, clear it
             localStorage.removeItem('auth_token');
             const errorData = await response.json().catch(() => ({}));
-            if (errorData.code === 'INACTIVITY_TIMEOUT') {
-              useGameStore.getState().setError('Session expired due to inactivity. Please sign in again.');
-            }
+            if (errorData.code === 'INACTIVITY_TIMEOUT') useGameStore.getState().setError('Session expired due to inactivity. Please sign in again.');
           }
         } catch (error) {
           console.error('Failed to validate token:', error);
           localStorage.removeItem('auth_token');
         }
       }
-      
       setLoading(false);
     };
-
     initializeApp();
   }, [setLoading]);
 
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-    if (isLoading) {
-      return <LoadingSpinner />;
-    }
-    
-    if (!player) {
-      return <Navigate to="/login" replace />;
-    }
-    
+    if (isLoading) return <LoadingSpinner />;
+    if (!player) return <Navigate to="/login" replace />;
     return <>{children}</>;
   };
 
   const PublicRoute = ({ children }: { children: React.ReactNode }) => {
-    if (isLoading) {
-      return <LoadingSpinner />;
-    }
-    
-    if (player) {
-      return <Navigate to="/dashboard" replace />;
-    }
-    
+    if (isLoading) return <LoadingSpinner />;
+    if (player) return <Navigate to="/dashboard" replace />;
     return <>{children}</>;
   };
 
@@ -109,81 +77,19 @@ function App() {
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-mafia-darker to-mafia-dark text-white">
         {error && <ErrorBanner />}
-        
         {player && <Navigation />}
-        
         <main className={`${player ? 'pt-16' : ''}`}>
           <Routes>
-            <Route 
-              path="/login" 
-              element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/crimes" 
-              element={
-                <ProtectedRoute>
-                  <Crimes />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/travel" 
-              element={
-                <ProtectedRoute>
-                  <Travel />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/garage" 
-              element={
-                <ProtectedRoute>
-                  <Garage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/store" 
-              element={
-                <ProtectedRoute>
-                  <Store />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/shoot" 
-              element={
-                <ProtectedRoute>
-                  <Shoot />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/props"
-              element={
-                <ProtectedRoute>
-                  <Props />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/" 
-              element={
-                player ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />
-              } 
-            />
+            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/crimes" element={<ProtectedRoute><Crimes /></ProtectedRoute>} />
+            <Route path="/travel" element={<ProtectedRoute><Travel /></ProtectedRoute>} />
+            <Route path="/garage" element={<ProtectedRoute><Garage /></ProtectedRoute>} />
+            <Route path="/store" element={<ProtectedRoute><Store /></ProtectedRoute>} />
+            <Route path="/shoot" element={<ProtectedRoute><Shoot /></ProtectedRoute>} />
+            <Route path="/shoot-calculator" element={<ProtectedRoute><ShootCalculator /></ProtectedRoute>} />
+            <Route path="/props" element={<ProtectedRoute><Props /></ProtectedRoute>} />
+            <Route path="/" element={player ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
           </Routes>
         </main>
       </div>
