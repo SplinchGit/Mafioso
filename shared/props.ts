@@ -7,6 +7,7 @@ export const PROP_TYPES = [
 ] as const;
 
 export type PropType = typeof PROP_TYPES[number];
+export type HouseGameType = Extract<PropType, 'blackjack' | 'roulette'>;
 
 export interface PropDefinition {
   type: PropType;
@@ -61,6 +62,10 @@ export const PROPS: readonly PropDefinition[] = [
 ] as const;
 
 export const CREW_BOSS_MIN_RANK = 15;
+export const HOUSE_WIN_PERCENT = 60;
+export const DEFAULT_MAX_BET = 1000;
+export const MIN_BET = 1;
+export const BLACKJACK_NATURAL_WIN_SHARE = 0.12; // ~4.8% of all hands when players win 40%.
 
 export interface CityProp {
   propId: string;
@@ -69,6 +74,7 @@ export interface CityProp {
   ownerId?: string;
   ownerUsername?: string;
   claimedAt?: string;
+  maxBet?: number;
   storedIncome?: number;
   storedBullets?: number;
 }
@@ -79,4 +85,8 @@ export function propId(cityId: number, type: PropType): string {
 
 export function isPropType(value: unknown): value is PropType {
   return typeof value === 'string' && (PROP_TYPES as readonly string[]).includes(value);
+}
+
+export function isHouseGameType(value: unknown): value is HouseGameType {
+  return value === 'blackjack' || value === 'roulette';
 }
