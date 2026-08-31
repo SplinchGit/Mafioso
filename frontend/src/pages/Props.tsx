@@ -35,6 +35,12 @@ const Props = () => {
 
     setLoading(true);
     try {
+      await fetch('/api/props/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'cleanup_dead_props' }),
+      });
+
       const response = await fetch(`/api/props?cityId=${player.city}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
