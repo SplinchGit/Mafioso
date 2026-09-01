@@ -137,6 +137,7 @@ Resources:
                   - secretsmanager:DeleteSecret
                   - secretsmanager:DescribeSecret
                   - secretsmanager:GetResourcePolicy
+                  - secretsmanager:GetSecretValue
                   - secretsmanager:PutResourcePolicy
                   - secretsmanager:TagResource
                   - secretsmanager:UntagResource
