@@ -144,6 +144,10 @@ Resources:
                   - !Sub arn:${AWS::Partition}:lambda:eu-west-2:${AWS::AccountId}:function:mafioso-backend-prod-*
                   - !Sub arn:${AWS::Partition}:lambda:eu-west-2:${AWS::AccountId}:layer:mafioso-prod-runtime
                   - !Sub arn:${AWS::Partition}:secretsmanager:eu-west-2:${AWS::AccountId}:secret:mafioso-prod-*
+              - Sid: GenerateMafiosoSecret
+                Effect: Allow
+                Action: secretsmanager:GetRandomPassword
+                Resource: '*'
               - Sid: ManageApiCognitoCloudFront
                 Effect: Allow
                 Action:
