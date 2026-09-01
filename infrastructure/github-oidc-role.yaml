@@ -119,6 +119,7 @@ Resources:
                   - dynamodb:UntagResource
                   - dynamodb:UpdateContinuousBackups
                   - dynamodb:UpdateTable
+                  - dynamodb:UpdateTimeToLive
                   - lambda:AddPermission
                   - lambda:CreateFunction
                   - lambda:DeleteFunction
