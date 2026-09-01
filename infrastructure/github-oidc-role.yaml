@@ -8,6 +8,27 @@ Resources:
       Url: https://token.actions.githubusercontent.com
       ClientIdList: [sts.amazonaws.com]
 
+  SamArtifactBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketName: !Sub 'mafioso-sam-artifacts-${AWS::AccountId}-eu-west-2'
+      VersioningConfiguration:
+        Status: Enabled
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireDeploymentArtifacts
+            Status: Enabled
+            ExpirationInDays: 30
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 7
+
   MafiosoGitHubDeployRole:
     Type: AWS::IAM::Role
     Properties:
@@ -51,10 +72,17 @@ Resources:
                 Action:
                   - s3:CreateBucket
                   - s3:DeleteBucket
+                  - s3:DeleteBucketPolicy
                   - s3:DeleteObject
                   - s3:GetBucketLocation
+                  - s3:GetBucketPolicy
+                  - s3:GetBucketPublicAccessBlock
+                  - s3:GetBucketTagging
+                  - s3:GetBucketVersioning
                   - s3:GetObject
                   - s3:ListBucket
+                  - s3:PutBucketPolicy
+                  - s3:PutBucketPublicAccessBlock
                   - s3:PutBucketTagging
                   - s3:PutBucketVersioning
                   - s3:PutEncryptionConfiguration
@@ -62,6 +90,8 @@ Resources:
                 Resource:
                   - arn:aws:s3:::aws-sam-cli-managed-default-*
                   - arn:aws:s3:::aws-sam-cli-managed-default-*/*
+                  - !GetAtt SamArtifactBucket.Arn
+                  - !Sub '${SamArtifactBucket.Arn}/*'
                   - !Sub arn:${AWS::Partition}:s3:::mafioso-prod-${AWS::AccountId}-eu-west-2-web-v2
                   - !Sub arn:${AWS::Partition}:s3:::mafioso-prod-${AWS::AccountId}-eu-west-2-web-v2/*
               - Sid: ManageGeneratedLambdaRoles
@@ -158,3 +188,5 @@ Resources:
 Outputs:
   DeployRoleArn:
     Value: !GetAtt MafiosoGitHubDeployRole.Arn
+  SamArtifactBucketName:
+    Value: !Ref SamArtifactBucket

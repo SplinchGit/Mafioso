@@ -20,6 +20,7 @@ jobs:
       AWS_REGION: eu-west-2
       AWS_ACCOUNT_ID: '620214494442'
       AWS_DEPLOY_ROLE_ARN: arn:aws:iam::620214494442:role/mafioso-github-deploy
+      SAM_ARTIFACT_BUCKET: mafioso-sam-artifacts-620214494442-eu-west-2
       STACK_NAME: mafioso-backend-prod
       STAGE: prod
 
@@ -73,7 +74,7 @@ jobs:
             --capabilities CAPABILITY_IAM \
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
-            --resolve-s3 \
+            --s3-bucket "$SAM_ARTIFACT_BUCKET" \
             --parameter-overrides Stage="$STAGE"
 
       - name: Read stack outputs
