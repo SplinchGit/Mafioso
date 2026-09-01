@@ -115,6 +115,7 @@ Resources:
                   - dynamodb:CreateTable
                   - dynamodb:DeleteTable
                   - dynamodb:DescribeTable
+                  - dynamodb:DescribeTimeToLive
                   - dynamodb:TagResource
                   - dynamodb:UntagResource
                   - dynamodb:UpdateContinuousBackups
