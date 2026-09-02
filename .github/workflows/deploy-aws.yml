@@ -23,6 +23,7 @@ jobs:
       SAM_ARTIFACT_BUCKET: mafioso-sam-artifacts-620214494442-eu-west-2
       STACK_NAME: mafioso-backend-prod
       STAGE: prod
+      MAFIOSO_OWNER_EMAIL: casualjfo7@gmail.com
 
     steps:
       - uses: actions/checkout@v4
@@ -75,7 +76,7 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --s3-bucket "$SAM_ARTIFACT_BUCKET" \
-            --parameter-overrides Stage="$STAGE"
+            --parameter-overrides Stage="$STAGE" OwnerEmail="$MAFIOSO_OWNER_EMAIL"
 
       - name: Read stack outputs
         id: outputs

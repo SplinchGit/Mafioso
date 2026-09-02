@@ -7,6 +7,10 @@ Parameters:
     Type: String
     Default: staging
     AllowedValues: [dev, staging, prod]
+  OwnerEmail:
+    Type: String
+    Default: casualjfo7@gmail.com
+    Description: The single verified Mafioso account allowed to receive owner or administrator privileges
 
 Globals:
   Function:
@@ -26,6 +30,7 @@ Globals:
         BULLET_FACTORIES_TABLE: !Ref BulletFactoriesTable
         JWT_SECRET_ARN: !Ref JWTSecretArn
         JWT_SECRET: !Sub '{{resolve:secretsmanager:${JWTSecretArn}:SecretString}}'
+        OWNER_EMAIL: !Ref OwnerEmail
 
 Resources:
   JWTSecretArn:
@@ -68,6 +73,13 @@ Resources:
       UserPoolName: !Sub 'mafioso-${Stage}'
       UsernameAttributes: [email]
       AutoVerifiedAttributes: [email]
+      UserAttributeUpdateSettings:
+        AttributesRequireVerificationBeforeUpdate: [email]
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailSubject: 'Your Mafioso family code'
+        EmailMessage: >-
+          Welcome to Mafioso. Your one-time family code is {####}. Enter it in Junction to confirm this email and open your account. If you did not request it, ignore this message.
       AccountRecoverySetting:
         RecoveryMechanisms:
           - Name: verified_email
@@ -595,6 +607,8 @@ Resources:
           AllowedMethods: [GET, HEAD, OPTIONS]
           CachedMethods: [GET, HEAD, OPTIONS]
           Compress: true
+          # AWS managed SecurityHeadersPolicy: HSTS, no-sniff, frame and referrer protections.
+          ResponseHeadersPolicyId: 67f7725c-6f97-4210-82d7-5512b31e9d03
           ForwardedValues:
             QueryString: false
             Cookies: { Forward: none }

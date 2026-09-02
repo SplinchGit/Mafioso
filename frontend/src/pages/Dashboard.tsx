@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore';
 import { CITIES, RANKS, CARS } from '../../../shared/constants.ts';
+import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const { player } = useGameStore();
@@ -119,33 +120,30 @@ const Dashboard = () => {
           <h3 className="text-xl font-bold text-mafia-red mb-4">⚡ Quick Actions</h3>
           
           <div className="grid grid-cols-2 gap-3">
-            <a 
-              href="/crimes" 
+            <Link
+              to="/crimes"
               className="btn-mafia text-center py-3 block hover:scale-105 transform transition-all"
             >
               💰 Commit Crime
-            </a>
+            </Link>
             
-            <a 
-              href="/travel" 
+            <Link
+              to="/travel"
               className="btn-secondary text-center py-3 block hover:scale-105 transform transition-all"
             >
               ✈️ Travel
-            </a>
+            </Link>
             
-            <a 
-              href="/garage" 
+            <Link
+              to="/garage"
               className="btn-secondary text-center py-3 block hover:scale-105 transform transition-all"
             >
               🚗 Garage
-            </a>
+            </Link>
             
-            <button 
-              className="btn-secondary py-3 hover:scale-105 transform transition-all"
-              disabled
-            >
-              👥 Gang (Soon)
-            </button>
+            <Link to="/crew" className="btn-secondary text-center py-3 block hover:scale-105 transform transition-all">
+              🤝 Crew
+            </Link>
           </div>
           
           <div className="mt-4 p-3 bg-mafia-gray-700 rounded-lg">

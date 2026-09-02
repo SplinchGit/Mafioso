@@ -75,7 +75,7 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-mafia-darker to-mafia-dark text-white">
         {error && <ErrorBanner />}
         {player && <Navigation />}
-        <main className={`${player ? 'pt-16' : ''}`}>
+        <main className={player ? 'min-h-screen pb-20 pt-[4.5rem] lg:pb-0 lg:pl-64' : 'min-h-screen'}>
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -91,6 +91,7 @@ function App() {
             <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
             <Route path="/bullet-factories" element={<ProtectedRoute><BulletFactory /></ProtectedRoute>} />
             <Route path="/" element={player ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to={player ? '/dashboard' : '/login'} replace />} />
           </Routes>
         </main>
       </div>

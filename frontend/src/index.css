@@ -1,13 +1,30 @@
 @import "tailwindcss";
 
+@theme {
+  --color-mafia-red: #dc3038;
+  --color-mafia-crimson: #b91f2a;
+  --color-mafia-gold: #e7b34a;
+  --color-mafia-dark: #10131a;
+  --color-mafia-darker: #07090d;
+  --color-mafia-gray-900: #0b0e13;
+  --color-mafia-gray-800: #151922;
+  --color-mafia-gray-700: #202630;
+  --color-mafia-gray-600: #343c49;
+  --color-mafia-gray-500: #657080;
+  --color-mafia-gray-400: #98a2b3;
+  --color-mafia-gray-300: #cbd2dc;
+  --color-blood: #ef5a5a;
+  --color-money: #55d36f;
+}
+
 @layer base {
   :root {
-    font-family: 'Georgia', serif;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     line-height: 1.5;
     font-weight: 400;
     color-scheme: dark;
     color: rgba(255, 255, 255, 0.87);
-    background-color: #0f172a;
+    background-color: #07090d;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
@@ -18,13 +35,13 @@
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    background:
+      radial-gradient(circle at 80% 0%, rgba(127, 29, 29, 0.12), transparent 35rem),
+      linear-gradient(145deg, #090b10 0%, #0f131a 100%);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: Georgia, serif;
-    color: #ff6b6b;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    font-family: Georgia, "Times New Roman", serif;
   }
 }
 
@@ -34,15 +51,16 @@
     color: white;
     font-weight: bold;
     padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 300ms;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    border-radius: 0.75rem;
+    transition: all 180ms ease;
+    box-shadow: 0 12px 30px -12px rgba(220, 48, 56, 0.45);
     border: 1px solid var(--color-mafia-red);
   }
   
   .btn-mafia:hover {
     background-color: var(--color-mafia-crimson);
     border-color: var(--color-mafia-crimson);
+    transform: translateY(-1px);
   }
 
   .btn-secondary {
@@ -50,8 +68,8 @@
     color: white;
     font-weight: 600;
     padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    transition: all 300ms;
+    border-radius: 0.75rem;
+    transition: all 180ms ease;
     border: 1px solid var(--color-mafia-gray-600);
   }
   
@@ -60,12 +78,12 @@
   }
 
   .card-mafia {
-    background-color: var(--color-mafia-gray-800);
-    border: 1px solid var(--color-mafia-gray-700);
-    border-radius: 0.5rem;
+    background: linear-gradient(145deg, rgba(24, 29, 39, 0.96), rgba(16, 19, 26, 0.96));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 1rem;
     padding: 1.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
   }
 
   .text-money {

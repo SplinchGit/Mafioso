@@ -5,6 +5,7 @@ import * as jwt from 'jsonwebtoken';
 import { Player } from '../../../shared/types';
 import { GAME_CONFIG } from '../../../shared/constants';
 import { getJWTSecret } from '../../shared/utils';
+import { getAccountRole } from '../../shared/authz';
 
 const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 const PLAYERS_TABLE = process.env.PLAYERS_TABLE || 'mafioso-players-v2';
@@ -35,8 +36,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     const claims = event.requestContext.authorizer?.claims as Record<string, string> | undefined;
     const subject = claims?.sub;
     const email = claims?.email;
-    if (!subject || !email) {
-      return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'Cognito authentication required' }) };
+    const emailVerified = claims?.email_verified === 'true';
+    if (!subject || !email || !emailVerified) {
+      return { statusCode: 401, headers, body: JSON.stringify({ success: false, error: 'A verified Cognito email is required' }) };
     }
 
     const worldId = `cognito_${subject}`;
@@ -98,8 +100,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 
     const jwtSecret = await getJWTSecret();
-    const token = jwt.sign({ worldId: player.worldId, username: player.username, email }, jwtSecret, { expiresIn: '30d' });
-    return { statusCode: 200, headers, body: JSON.stringify({ success: true, player, token }) };
+    const role = getAccountRole(email, emailVerified);
+    const token = jwt.sign({ worldId: player.worldId, username: player.username, email, emailVerified, role }, jwtSecret, { expiresIn: '30d' });
+    return {
+      statusCode: 200,
+      headers,
+      body: JSON.stringify({ success: true, player, token, access: { role, canAdmin: role === 'owner' } }),
+    };
   } catch (error) {
     console.error('cognitoSession failed', error);
     return { statusCode: 500, headers, body: JSON.stringify({ success: false, error: 'Internal server error' }) };
