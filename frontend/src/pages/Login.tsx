@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { confirmSignUp, resendSignUpCode, signIn, signUp } from 'aws-amplify/auth';
+import { confirmSignUp, resendSignUpCode, signIn, signOut as cognitoSignOut, signUp } from 'aws-amplify/auth';
 import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
@@ -12,15 +12,23 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const finishSession = async () => {
-    const result = await establishCognitoSession(username || undefined);
+  const finishSession = async (chosenUsername?: string) => {
+    const result = await establishCognitoSession(chosenUsername);
     if (!result.success) setError(result.error || 'Could not start game session');
+  };
+
+  const signInWithEmail = async () => {
+    // Cognito can retain a valid identity after Mafioso's shorter game session
+    // expires. Clear that cached identity before starting the explicit
+    // email/password login requested by the player.
+    try { await cognitoSignOut(); } catch { /* no cached Cognito user */ }
+    return signIn({ username: email.trim().toLowerCase(), password });
   };
 
   const handleSignIn = async () => {
     setError(null); setMessage(null);
     try {
-      const result = await signIn({ username: email.trim(), password });
+      const result = await signInWithEmail();
       if (!result.isSignedIn) throw new Error('Sign-in needs another Cognito step');
       await finishSession();
     } catch (err) {
@@ -35,14 +43,15 @@ const Login = () => {
       return;
     }
     try {
+      try { await cognitoSignOut(); } catch { /* no cached Cognito user */ }
       const result = await signUp({
-        username: email.trim(),
+        username: email.trim().toLowerCase(),
         password,
-        options: { userAttributes: { email: email.trim(), preferred_username: username } },
+        options: { userAttributes: { email: email.trim().toLowerCase(), preferred_username: username } },
       });
       if (result.isSignUpComplete) {
-        const login = await signIn({ username: email.trim(), password });
-        if (login.isSignedIn) await finishSession();
+        const login = await signInWithEmail();
+        if (login.isSignedIn) await finishSession(username);
       } else {
         setMode('confirm');
         setMessage('Check your email for the confirmation code.');
@@ -55,11 +64,11 @@ const Login = () => {
   const handleConfirm = async () => {
     setError(null); setMessage(null);
     try {
-      const result = await confirmSignUp({ username: email.trim(), confirmationCode: code.trim() });
+      const result = await confirmSignUp({ username: email.trim().toLowerCase(), confirmationCode: code.trim() });
       if (!result.isSignUpComplete) throw new Error('Account confirmation is not complete');
-      const login = await signIn({ username: email.trim(), password });
+      const login = await signInWithEmail();
       if (!login.isSignedIn) throw new Error('Sign-in could not complete');
-      await finishSession();
+      await finishSession(username);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Confirmation failed');
     }
@@ -68,7 +77,7 @@ const Login = () => {
   const handleResend = async () => {
     setError(null); setMessage(null);
     try {
-      await resendSignUpCode({ username: email.trim() });
+      await resendSignUpCode({ username: email.trim().toLowerCase() });
       setMessage('A fresh family code is on its way. Check spam if it does not arrive in a minute.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not resend the code');
@@ -101,15 +110,15 @@ const Login = () => {
               <div className="mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-mafia-red/40 bg-mafia-red/10 text-2xl">♠</div>
               <p className="mb-2 text-xs font-bold uppercase tracking-[0.25em] text-mafia-red">Mafioso</p>
               <h2 className="text-3xl font-black text-white">{mode === 'signin' ? 'Return to the table' : mode === 'signup' ? 'Join the family' : 'Confirm your address'}</h2>
-              <p className="mt-3 text-sm leading-6 text-mafia-gray-400">{mode === 'confirm' ? 'We emailed a one-time family code. It proves this address belongs to you; it does not grant any game or admin privileges.' : 'Your progress and every economy action are checked by the live Mafioso server.'}</p>
+              <p className="mt-3 text-sm leading-6 text-mafia-gray-400">{mode === 'confirm' ? 'We emailed a one-time family code. It proves this address belongs to you; it does not grant any game or admin privileges.' : mode === 'signup' ? 'Your email and password secure the account. Your in-game username is the public name other players will see.' : 'Sign in with your email and password. Your in-game username and progress are linked to this account.'}</p>
             </div>
 
             {error && <div className="mb-4 rounded-xl border border-blood/60 bg-blood/10 p-3 text-sm text-blood">{error}</div>}
             {message && <div className="mb-4 rounded-xl border border-mafia-gold/30 bg-mafia-gold/10 p-3 text-sm text-mafia-gold">{message}</div>}
 
             <div className="space-y-4">
-              <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">Email</span><input required className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-white outline-none transition focus:border-mafia-red" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
-              {mode === 'signup' && <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">Street name</span><input required className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-white outline-none transition focus:border-mafia-red" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="3–20 letters, numbers or underscores" autoComplete="nickname" /></label>}
+              <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">Email address</span><input required className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-white outline-none transition focus:border-mafia-red" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" /></label>
+              {mode === 'signup' && <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">In-game username</span><input required className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-white outline-none transition focus:border-mafia-red" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Public name · 3–20 letters, numbers or _" autoComplete="nickname" /></label>}
               {mode !== 'confirm' && <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">Password</span><input required minLength={8} className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-white outline-none transition focus:border-mafia-red" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8+ characters" autoComplete={mode === 'signin' ? 'current-password' : 'new-password'} /></label>}
               {mode === 'confirm' && <label className="block"><span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-mafia-gray-400">Family code</span><input required className="w-full rounded-xl border border-white/10 bg-black/25 px-4 py-3.5 text-center font-mono text-xl tracking-[0.35em] text-white outline-none transition focus:border-mafia-red" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} placeholder="000000" inputMode="numeric" autoComplete="one-time-code" /></label>}
 
