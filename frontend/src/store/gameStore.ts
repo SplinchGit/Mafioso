@@ -17,7 +17,6 @@ interface GameStore extends GameState {
   commitCrime: (crimeId: number) => Promise<CrimeResult | null>;
   travel: (cityId: number) => Promise<boolean>;
   tradeGoods: (goodId: GoodId, action: 'buy' | 'sell', quantity: number) => Promise<GoodsTradeResponse | null>;
-  buyCar: (carId: number) => Promise<boolean>;
   buyGun: (gunId: number) => Promise<boolean>;
   buyProtection: (protectionId: number) => Promise<boolean>;
   swissBank: (action: 'deposit' | 'withdraw', amount: number) => Promise<boolean>;
@@ -172,38 +171,6 @@ export const useGameStore = create<GameStore>()(
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             set({ error: errorMessage, isLoading: false });
             return null;
-          }
-        },
-
-        buyCar: async (carId: number): Promise<boolean> => {
-          const { player } = get();
-          if (!player) return false;
-
-          set({ isLoading: true, error: null });
-
-          try {
-            const response = await apiFetch('/player/buy-car', {
-              method: 'POST',
-              body: JSON.stringify({ carId })
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-              throw new Error(data.error || 'Failed to buy car');
-            }
-
-            set((state) => ({
-              player: data.player,
-              isLoading: false,
-              lastUpdate: new Date().toISOString()
-            }));
-
-            return true;
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            set({ error: errorMessage, isLoading: false });
-            return false;
           }
         },
 
